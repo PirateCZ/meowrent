@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';img-src 'self' data:;">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>File Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav id="navbar">
+	<div class="nav-left">
+	    <button id="backButton">Back</button>
+	    <div id="currentPathDiv"> </div>
+	</div>
+	<div class="nav-right">
+	    <button id="toggleView">View</button>
+	    <button id="toggleDarkMode">🌙</button><!--☀️ - &#9728;&#65039; 🌙 - &#127769; -->
+	</div>
+    </nav>
+
+    <main>
+	<div id="fsEntriesDiv" class="fs-view grid-view">
+	</div>
+    </main>
+
+    <script src="./renderer.js"></script>
+</body>
+</html>
