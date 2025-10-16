@@ -1,12 +1,73 @@
 <!doctype html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Hello World!</title>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Meowrent</title>
+</head>
+<body>
+  <div id="app">
 
-  </head>
-  <body>
-    <h1>💖 Hello World!</h1>
-    <p>Welcome to your Electron application.</p>
-  </body>
+    <!-- Top toolbar -->
+    <header class="topbar" role="banner">
+      <div class="topbar-left">
+        <button class="icon-btn" id="addTorrentBtn" aria-label="Přidat torrent">＋</button>
+        <button class="icon-btn" id="btn-settings" aria-label="Nastavení">⚙</button>
+      </div>
+      <div class="topbar-center">
+        <h1 class="app-title">Meowrent</h1>
+      </div>
+      <div class="topbar-right">
+        <input class="search" type="search" placeholder="Hledat torrent..." aria-label="Hledat torrent" />
+      </div>
+    </header>
+
+    <!-- Main area: sidebar + main content -->
+    <main class="main-content" role="main">
+
+      <!-- Center column: torrent list + toolbar -->
+      <section class="center-column">
+
+        <!-- Torrent list (table-like) -->
+        <div class="torrent-list" role="table" aria-label="Seznam torrentů">
+          <div class="list-header" role="row">
+            <div class="col col-name">Název</div>
+            <div class="col col-size">Velikost</div>
+            <div class="col col-progress">Progress</div>
+            <div class="col col-speed">Rychlost</div>
+            <div class="col col-peers">Peerů</div>
+            <div class="col col-status">Status</div>
+          </div>
+
+          <!-- Example row (replicate dynamically) -->
+          <div class="list-row" role="row" tabindex="0" aria-selected="false">
+            <div class="col col-name">[example] Anime Girl Collection</div>
+            <div class="col col-size">1.2 GB</div>
+            <div class="col col-progress">
+              <div class="progress-bar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="42">
+                <div class="progress-fill" style="width:42%"></div>
+              </div>
+            </div>
+            <div class="col col-speed">320 KB/s</div>
+            <div class="col col-peers">12 (5)</div>
+            <div class="col col-status">Stahování</div>
+          </div>
+
+          <!-- Empty state 
+          <div class="list-empty" role="row" aria-hidden="true">Žádné torrenty k zobrazení</div>
+	  -->
+        </div>
+      </section>
+    </main>
+
+    <!-- Status bar -->
+    <footer class="statusbar" role="contentinfo">
+      <div class="status-left">D: 320 KB/s ↑: 50 KB/s</div>
+      <div class="status-center">Počet torrentů: 3 | Celkem seederů: 45</div>
+      <div class="status-right">Verze: 0.1.0</div>
+    </footer>
+  </div>
+
+</body>
 </html>
+

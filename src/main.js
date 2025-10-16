@@ -1,5 +1,6 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('node:path');
+let mainWindow = undefined;
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -7,20 +8,21 @@ if (require('electron-squirrel-startup')) {
 }
 
 const createWindow = () => {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
-    webPreferences: {
-      preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
-    },
-  });
+    // Create the browser window.
+    mainWindow = new BrowserWindow({
+	width: 800,
+	height: 600,
+	webPreferences: {
+	    preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+	},
+    });
 
-  // and load the index.html of the app.
-  mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+    // and load the index.html of the app.
+    mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools();
+    // Open the DevTools.
+    mainWindow.webContents.openDevTools();
+
 };
 
 // This method will be called when Electron has finished
@@ -47,5 +49,17 @@ app.on('window-all-closed', () => {
   }
 });
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.
+ipcMain.handle("openForm", () => {
+    console.log(path.join(__dirname, "../../src/preload.js"))
+    let formWindow = new BrowserWindow({
+	width: 600,
+	height: 400,
+	parent: mainWindow,
+	modal: true, 
+	webPreferences: {
+	    preload: path.join(__dirname, "../../src/preload.js"),
+	},
+    })
+
+    formWindow.loadFile("src/form.html")
+})
