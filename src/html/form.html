@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Meowrent – Vytvořit torrent</title>
+</head>
+<body>
+<main class="main-content" role="main">
+    <div class="formContainer">
+	<div class="switcher">
+	    <div id="downloadBtn" class="torrentFormBtn activeBtn">
+	    	<h4>Stáhnout Torrent</h4>
+	    </div>
+	    <div id="createBtn" class="torrentFormBtn">
+		<h4>Vytvořit Torrent</h4>
+	    </div>
+	</div>	
+	<div id="downloadFormDiv" class="torrentForm">
+	    <form id="downloadForm">
+		<label>
+		    Torrent/Magnet link (každý na nový řádek):
+		    <textarea name="torrentLinks" id="torrentLinks" placeholder="https://archlinux.org/releng/releases/2025.10.01/torrent/"></textarea>
+		</label>
+		<p><strong>Nebo</strong></p>
+		<label>
+		    Vyber soubor:
+		    <input type="file" name="torrentFiles" id="torrentFiles" multiple>
+		</label>
+
+		<label>
+		    Uložit zde: 
+		    <div class="folderDiv">
+		    	<input type="text" id="saveLocation" required>
+			<button type="button" id="saveLocationDialogBtn">Vyberte složku</button>
+		    </div>
+		</label>
+
+		<label class="inline">
+		    <input type="checkbox" name="startTorrent" id="startTorrent" checked>
+		    Začít stahovat torrent
+	 	</label>
+
+		<label class="inline">
+		    <input type="checkbox" name="topQueue" id="topQueue">
+		    Dát na začátek fronty
+	 	</label>
+
+		<label class="inline">
+		    <input type="checkbox" name="hashCheck" id="hashCheck">
+		    Preskočit hash
+	 	</label>
+
+		<button type="submit" class="btn-accent">Stáhnout torrent</button>
+	    </form>
+	</div>
+	<div id="createFormDiv"  class="torrentForm hidden">
+	    <form id="createForm">
+		<label>
+		    Vyber soubor:
+		    <input type="file" name="uploadFiles" id="uploadFiles" multiple required>
+		</label>
+
+		<label>
+		    Název torrentu:
+		    <input type="text" name="name" id="name" placeholder="Např. MoewRent v1.0">
+		</label>
+
+		<label>
+		    Tracker (announce URL):
+		    <input type="text" name="announce" id="announce" value="udp://tracker.opentrackr.org:1337/announce" required>
+		</label>
+
+		<label>
+		    Další trackery (každý na nový řádek):
+		    <textarea name="announceList" id="announceList" placeholder="udp://tracker.openbittorrent.com:6969/announce&#10;wss://tracker.openwebtorrent.com"></textarea>
+		</label>
+
+		<label>
+		    Komentář:
+		    <textarea name="comment" id="comment" placeholder="Krátký popis torrentu..."></textarea>
+		</label>
+
+		<label>
+		    Velikost dílků:
+		    <select name="pieceLength" id="pieceLength">
+			<option value="auto" selected>Automaticky</option>
+			<option value="65536">64 KB</option>
+			<option value="262144">256 KB</option>
+			<option value="1048576">1 MB</option>
+		    </select>
+		</label>
+
+		<label class="inline">
+		    <input type="checkbox" name="private" id="private">
+		    Soukromý torrent (bez DHT)
+		</label>
+
+		<label class="inline">
+		    <input type="checkbox" name="autoseed" id="autoseed" checked>
+		    Automaticky seedovat po vytvoření
+		</label>
+
+		<button type="submit" class="btn-accent">Vytvořit torrent</button>
+	    </form>
+	</div>
+   </div> 
+</main>
+</body>
+</html>

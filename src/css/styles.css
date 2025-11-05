@@ -1,0 +1,22 @@
+:root{
+  --bg: #f9f7fc;
+  --surface: #8549c3
+  --text: #0b070f;
+  --muted: #b890e0;
+  --accent:  #9c5edb;
+  --font-family: "Segoe UI", Roboto, sans-serif;
+}
+
+* { 
+    box-sizing: border-box; 
+    font-family: var(--font-family);
+}
+
+
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+}

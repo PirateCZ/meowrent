@@ -1,5 +1,5 @@
-import './index.css';
-console.log("Hello World!")
+import '../css/styles.css';
+import '../css/main.css';
 
 const addButton = document.getElementById('addTorrentBtn')
 
