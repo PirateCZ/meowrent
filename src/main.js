@@ -1,7 +1,10 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('node:path')
-//const webtorrent = require('webtorrent-hybrid')
-let mainWindow = undefined;
+let mainWindow = undefined
+let formWindow = undefined
+
+import WebTorrent from 'webtorrent'
+const client = new WebTorrent()
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -49,7 +52,7 @@ app.on('window-all-closed', () => {
 });
 
 ipcMain.handle("openForm", () => {
-    let formWindow = new BrowserWindow({
+    formWindow = new BrowserWindow({
 	width: 600,
 	height: 400,
 	parent: mainWindow,
@@ -62,9 +65,49 @@ ipcMain.handle("openForm", () => {
     formWindow.loadURL(FORM_WINDOW_WEBPACK_ENTRY)
 })
 
-ipcMain.handle("openDialog", async () => {
+ipcMain.handle("openFiles", async () => {
+    const result = await dialog.showOpenDialog({
+	properties: ['openFile', 'multiSelections'],
+	filters: [
+	    {name: "Torrent Files", extensions: ['torrent']},
+	]
+    })
+
+    if (result.canceled) {
+	return []
+    }
+
+    return result.filePaths
+})
+
+ipcMain.handle("openFolder", async () => {
     const result = await dialog.showOpenDialog({
 	properties: ['openDirectory'],
     })
     return result.filePaths[0]
+})
+
+ipcMain.handle("getDownloadsFolder", async () => {
+    const downloadsFolder = app.getPath('downloads')
+    return downloadsFolder
+})
+
+ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList, startTorrent, topQueue, hashCheck) => {
+    for (let i = 0; i < fileList.length; i++) {
+    	client.add(fileList[i], { path: 'saveLocation' }, (torrent) => {
+	    console.log("Torrent Name: " + torrent.name)
+
+	    torrent.on('download', () => {
+		console.log("Progress: " + (torrent.progress * 100))
+	    })
+
+	    torrent.on('wire', (wire, addr) => {
+		console.log('Connected to peer:', addr);
+	    });
+
+	    torrent.on('done', () => {
+		console.log(torrent.name + "is done")
+	    })
+	})
+    }
 })

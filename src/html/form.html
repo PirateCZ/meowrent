@@ -20,18 +20,21 @@
 	    <form id="downloadForm">
 		<label>
 		    Torrent/Magnet link (každý na nový řádek):
-		    <textarea name="torrentLinks" id="torrentLinks" placeholder="https://archlinux.org/releng/releases/2025.10.01/torrent/"></textarea>
+		    <textarea wrap="off" id="torrentLinks" placeholder="https://archlinux.org/releng/releases/2025.10.01/torrent/"></textarea>
 		</label>
 		<p><strong>Nebo</strong></p>
 		<label>
 		    Vyber soubor:
-		    <input type="file" name="torrentFiles" id="torrentFiles" multiple>
+		    <div class="inline">
+			<textarea wrap="off" id="torrentFiles" readonly></textarea>
+			<button type="button" name="getTorrentFiles" id="getTorrentFiles">Vyberte soubory</button>
+		    </div>
 		</label>
 
 		<label>
 		    Uložit zde: 
-		    <div class="folderDiv">
-		    	<input type="text" id="saveLocation" required>
+		    <div class="inline">
+		    	<input type="text" id="saveLocationInput" required>
 			<button type="button" id="saveLocationDialogBtn">Vyberte složku</button>
 		    </div>
 		</label>
@@ -51,7 +54,7 @@
 		    Preskočit hash
 	 	</label>
 
-		<button type="submit" class="btn-accent">Stáhnout torrent</button>
+		<button id="downloadTorrentBtn" type="button" class="btn-accent">Stáhnout torrent</button>
 	    </form>
 	</div>
 	<div id="createFormDiv"  class="torrentForm hidden">

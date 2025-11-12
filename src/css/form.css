@@ -5,13 +5,17 @@
     padding: 3rem 1rem;
 }
 
+.formContainer{
+    width: 60vw;
+}
+
 .torrentForm{
     background: var(--bg);
     border: 1px solid var(--muted);
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     width: 100%;
-    max-width: 600px;
+    max-width: 1200px;
     padding: 2rem;
     display: flex;
     flex-direction: column;
@@ -35,6 +39,8 @@ input[type="text"], input[type="file"], textarea, select {
     color: var(--text);
     background: var(--bg);
     transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 input[type="text"]:focus, input[type="file"]:focus, textarea:focus, select:focus {
@@ -46,13 +52,13 @@ input[type="text"]:focus, input[type="file"]:focus, textarea:focus, select:focus
 textarea {
     resize: vertical;
     min-height: 70px;
+    max-width: ;
 }
 
 .inline {
+    display: flex;
     flex-direction: row;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 500;
+    gap: 0.2rem;
 }
 
 .btn-accent {
@@ -99,20 +105,17 @@ textarea {
     display: flex;
     flex-direction: row;
 }
-.folderDiv {
-    display: flex;
-    flex-direction: row;
-}
 
-.folderDiv button {
+ .inline button {
     background-color: var(--background);
     border: 1px var(--accent) solid;
     border-radius: 6px;
     margin-left: 0.2rem;
     cursor: pointer;
+    min-width: 120px;
 }
 
-.folderDiv button:hover {
+.inline button:hover {
     background-color: var(--accent);
 }
 
@@ -122,11 +125,6 @@ textarea {
 
 h4 {
     margin: 0;
-}
-
-textarea {
-    y-overflow: auto;
-    text-wrap: no-wrap;
 }
 
 @keyframes fadeIn {

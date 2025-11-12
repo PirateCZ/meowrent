@@ -30,6 +30,7 @@
     "@vercel/webpack-asset-relocator-loader": "^1.7.3",
     "css-loader": "^6.11.0",
     "electron": "38.1.2",
+    "electron-rebuild": "^3.2.9",
     "node-loader": "^2.1.0",
     "node-pre-gyp": "^0.17.0",
     "style-loader": "^3.3.4"
