@@ -1,10 +1,12 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('node:path')
+const fs = require('node:fs')
 let mainWindow = undefined
 let formWindow = undefined
 
-import WebTorrent from 'webtorrent'
+import WebTorrent from "webtorrent";
 const client = new WebTorrent()
+
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -94,19 +96,44 @@ ipcMain.handle("getDownloadsFolder", async () => {
 
 ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList, startTorrent, topQueue, hashCheck) => {
     for (let i = 0; i < fileList.length; i++) {
-    	client.add(fileList[i], { path: 'saveLocation' }, (torrent) => {
-	    console.log("Torrent Name: " + torrent.name)
+    	const file = fileList[i];
+	console.log(`File ${i+1}: ${file}`)
+    }
 
-	    torrent.on('download', () => {
-		console.log("Progress: " + (torrent.progress * 100))
+    for (let i = 0; i < linkList.length; i++) {
+    	const link = linkList[i];
+    	console.log(`Link ${i+1}: ${link}`)
+
+	client.add(link, {
+	    path: saveLocation
+	}, (torrent) => {
+	    torrent.on('infoHash', () => {
+		console.log(`InfoHash of ${torrent.name} has been created: ${torrent.infoHash}`)
+	    })
+	    
+	    torrent.on('metadata', () => {
+		console.log(`Metadata of ${torrent.name} have been determined`)
 	    })
 
-	    torrent.on('wire', (wire, addr) => {
-		console.log('Connected to peer:', addr);
-	    });
+	    torrent.on('ready', () => {
+		console.log(`${torrent.name} is ready to be downloaded`)
+	    })
 
-	    torrent.on('done', () => {
-		console.log(torrent.name + "is done")
+	    torrent.on('done', async () => {
+		await client.remove(link)
+		console.log(`${torrent.name} is done downloading`)
+	    })
+	    
+	    let lastDownloadProgress = 0 
+	    torrent.on('download', () => {
+		if(lastDownloadProgress != Math.floor(torrent.progress * 100)){
+		    lastDownloadProgress = Math.floor(torrent.progress * 100)
+		    console.log(`Progress for ${torrent.name}: ${Math.floor(torrent.progress * 100)}%`)
+		}
+	    })
+
+	    torrent.on('wire', (wire) => {
+		console.log(`Connected torrent ${torrent.name} to peer using ${wire.type} at ip ${wire.remoteAddress}`)
 	    })
 	})
     }
