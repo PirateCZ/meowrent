@@ -86,7 +86,7 @@ ipcMain.handle("openFolder", async () => {
     const result = await dialog.showOpenDialog({
 	properties: ['openDirectory'],
     })
-    return result.filePaths[0]
+    return result.filePaths[0] == undefined ? app.getPath('downloads') : result.filePaths[0]
 })
 
 ipcMain.handle("getDownloadsFolder", async () => {
