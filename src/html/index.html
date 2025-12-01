@@ -10,21 +10,21 @@
 	<!-- Top toolbar -->
 	<header class="topbar" role="banner">
 	    <div class="topbar-left">
-		<button class="icon-btn" id="addTorrentBtn" aria-label="Přidat torrent">＋</button>
-		<button class="icon-btn" id="btn-settings" aria-label="Nastavení">⚙</button>
+		<button class="icon-btn" id="addTorrentBtn">＋</button>
+		<button class="icon-btn" id="btn-settings">⚙</button>
 	    </div>
 	    <div class="topbar-center">
 		<h1 class="app-title">Meowrent</h1>
 	    </div>
 	    <div class="topbar-right">
-		<input class="search" type="search" placeholder="Hledat torrent..." aria-label="Hledat torrent" />
+		<input class="search" type="search" placeholder="Hledat torrent..."/>
 	    </div>
 	</header>
 	<!-- Main area: sidebar + main content -->
 	<main class="main-content" role="main">
 	    <div class="torrent-container">
 		<!-- Torrent list -->
-		<div class="torrent-list" role="table" aria-label="Seznam torrentů">
+		<div class="torrent-list" role="table" id="torrentList">
 		    <div class="list-header" role="row">
 			<div class="category col col-name">Název</div>
 			<div class="category col col-size">Velikost</div>
@@ -34,11 +34,11 @@
 			<div class="category col col-status">Status</div>
 		    </div>
 		    <!-- Example row (replicate dynamically) -->
-		    <div class="list-row" role="row" tabindex="0" aria-selected="false">
+		    <div class="list-row" role="row" tabindex="0">
 			<div class="col col-name">[example] Anime Girl Collection</div>
 			<div class="col col-size">1.2 GB</div>
 			<div class="col col-progress">
-			    <div class="progress-bar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="42">
+			    <div class="progress-bar">
 				<div class="progress-fill" style="width:42%"></div>
 			    </div>
 			</div>
@@ -47,7 +47,7 @@
 			<div class="col col-status">Stahování</div>
 		    </div>
 		    <!-- Empty state 
-		    <div class="list-empty" role="row" aria-hidden="true">Žádné torrenty k zobrazení</div>
+		    <div class="list-empty" role="row">Žádné torrenty k zobrazení</div>
 		    -->
 		</div>
 	    </div>

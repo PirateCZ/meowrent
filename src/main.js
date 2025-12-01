@@ -5,8 +5,11 @@ let mainWindow = undefined
 let formWindow = undefined
 
 import WebTorrent from "webtorrent";
-const client = new WebTorrent()
-
+const client = new WebTorrent(
+    {
+	dht: true,
+    }
+)
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -16,8 +19,8 @@ if (require('electron-squirrel-startup')) {
 const createWindow = () => {
     // Create the browser window.
     mainWindow = new BrowserWindow({
-	width: 800,
-	height: 600,
+	width: 1600,
+	height: 900,
 	webPreferences: {
 	    preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
 	},
@@ -55,8 +58,8 @@ app.on('window-all-closed', () => {
 
 ipcMain.handle("openForm", () => {
     formWindow = new BrowserWindow({
-	width: 600,
-	height: 400,
+	width: 1280,
+	height: 720,
 	parent: mainWindow,
 	modal: true, 
 	webPreferences: {
@@ -96,34 +99,17 @@ ipcMain.handle("getDownloadsFolder", async () => {
 
 ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList, startTorrent, topQueue, hashCheck) => {
     for (let i = 0; i < fileList.length; i++) {
-    	const file = fileList[i];
+    	const file = path.resolve(fileList[i])
 	console.log(`File ${i+1}: ${file}`)
-    }
 
-    for (let i = 0; i < linkList.length; i++) {
-    	const link = linkList[i];
-    	console.log(`Link ${i+1}: ${link}`)
-
-	client.add(link, {
-	    path: saveLocation
+	client.add(file, {
+	    path: saveLocation,
+	    skipVerify: hashCheck,
+	    paused: !startTorrent,
 	}, (torrent) => {
-	    torrent.on('infoHash', () => {
-		console.log(`InfoHash of ${torrent.name} has been created: ${torrent.infoHash}`)
-	    })
-	    
-	    torrent.on('metadata', () => {
-		console.log(`Metadata of ${torrent.name} have been determined`)
-	    })
+	    console.log(`${torrent.name} is ready to be downloaded`)
+	    mainWindow.webContents.send('addTorrentToList', { torrentName: torrent.name })
 
-	    torrent.on('ready', () => {
-		console.log(`${torrent.name} is ready to be downloaded`)
-	    })
-
-	    torrent.on('done', async () => {
-		await client.remove(link)
-		console.log(`${torrent.name} is done downloading`)
-	    })
-	    
 	    let lastDownloadProgress = 0 
 	    torrent.on('download', () => {
 		if(lastDownloadProgress != Math.floor(torrent.progress * 100)){
@@ -134,6 +120,42 @@ ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList
 
 	    torrent.on('wire', (wire) => {
 		console.log(`Connected torrent ${torrent.name} to peer using ${wire.type} at ip ${wire.remoteAddress}`)
+	    })
+
+	    torrent.on('done', async () => {
+		//await client.remove(file)
+		console.log(`${torrent.name} is done downloading`)
+	    })
+	})
+    }
+
+    for (let i = 0; i < linkList.length; i++) {
+    	const link = linkList[i]
+    	console.log(`Link ${i+1}: ${link}`)
+
+	client.add(link, {
+	    path: saveLocation,
+	    skipVerify: hashCheck,
+	    paused: !startTorrent,
+	}, (torrent) => {
+	    console.log(`${torrent.name} is ready to be downloaded`)
+	    mainWindow.webContents.send('addTorrentToList', { torrentName: torrent.name })
+
+	    let lastDownloadProgress = 0 
+	    torrent.on('download', () => {
+		if(lastDownloadProgress != Math.floor(torrent.progress * 100)){
+		    lastDownloadProgress = Math.floor(torrent.progress * 100)
+		    console.log(`Progress for ${torrent.name}: ${Math.floor(torrent.progress * 100)}%`)
+		}
+	    })
+
+	    torrent.on('wire', (wire) => {
+		console.log(`Connected torrent ${torrent.name} to peer using ${wire.type} at ip ${wire.remoteAddress}`)
+	    })
+
+	    torrent.on('done', async () => {
+		//await client.remove(link)
+		console.log(`${torrent.name} is done downloading`)
 	    })
 	})
     }
