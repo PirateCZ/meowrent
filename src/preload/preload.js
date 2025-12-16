@@ -5,5 +5,6 @@ contextBridge.exposeInMainWorld('formApi', {
 })
 
 contextBridge.exposeInMainWorld('interfaceApi', {
-    addTorrentToList: (callback) => ipcRenderer.on('addTorrentToList', callback)
+    addTorrentToList: (callback) => ipcRenderer.on('addTorrentToList', callback),
+    changeDownloadProgress: (callback) => ipcRenderer.on('changeDownloadProgress', callback)
 })

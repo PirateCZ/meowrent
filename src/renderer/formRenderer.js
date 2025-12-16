@@ -15,6 +15,12 @@ const getTorrentFiles = document.getElementById("getTorrentFiles")
 const saveLocationDialogBtn = document.getElementById('saveLocationDialogBtn')
 const saveLocationInput = document.getElementById('saveLocationInput')
 
+const createTorrentBtn = document.getElementById('createTorrentBtn')
+
+const uploadFilesBtn = document.getElementById('getUploadFiles')
+const uploadFolderBtn = document.getElementById('getUploadFolder')
+const uploadInput = document.getElementById('uploadInput')
+
 document.addEventListener('DOMContentLoaded', async () => {
     saveLocationInput.value = await window.dialogApi.getDownloadsFolder()
 })
@@ -39,12 +45,26 @@ saveLocationDialogBtn.addEventListener("click", async () => {
 })
 
 getTorrentFiles.addEventListener("click", async () => {
-    let filePaths = await window.dialogApi.openFiles()
+    let filePaths = await window.dialogApi.openFiles(['torrent'])
     let filePlaceholder = ""
     for (let i = 0; i < filePaths.length; i++) {
     	  filePlaceholder += filePaths[i] + "\n";
     }
     downloadTorrentFilesInput.value = filePlaceholder
+})
+
+uploadFilesBtn.addEventListener("click", async () => {
+    let filePaths = await window.dialogApi.openFiles(['*'])
+    let filePlaceholder = ""
+    for (let i = 0; i < filePaths.length; i++) {
+    	  filePlaceholder += filePaths[i] + "\n";
+    }
+    uploadInput.value = filePlaceholder
+})
+
+uploadFolderBtn.addEventListener("click", async () => {
+    const folderPath = await window.dialogApi.openFolder()
+    uploadInput.value = folderPath
 })
 
 downloadTorrentBtn.addEventListener("click", async () => {
@@ -74,4 +94,27 @@ downloadTorrentBtn.addEventListener("click", async () => {
     if(hasFiles || hasLinks){
 	await window.torrentApi.downloadTorrent(saveLocation, filePaths, links, startTorrent, topQueue, hashCheck)
     }
+})
+
+createTorrentBtn.addEventListener('click', async () => {
+    let itemsToUpload = uploadInput.value.split("\n")
+    if(itemsToUpload[itemsToUpload.length-1] == ""){
+	itemsToUpload.pop()	
+    }
+
+    let torrentName = document.getElementById("torrentName").value
+
+    let trackerURLs = document.getElementById("announceList").value.split("\n")
+    if(trackerURLs[trackerURLs.length-1] == ""){
+	trackerURLs.pop()	
+    }
+    
+    let torrentComment = document.getElementById("torrentComment").value
+
+    let pieceLength = document.getElementById("pieceLength").value
+
+    let privateTorrent = document.getElementById("privateTorrent").checked
+    let startSeeding = document.getElementById("startSeeding").checked
+
+    await window.torrentApi.createTorrent(itemsToUpload, torrentName, trackerURLs, torrentComment, pieceLength, privateTorrent, startSeeding)
 })

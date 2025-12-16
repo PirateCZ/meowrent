@@ -60,34 +60,33 @@
 	<div id="createFormDiv"  class="torrentForm hidden">
 	    <form id="createForm">
 		<label>
-		    Vyber soubor:
-		    <input type="file" name="uploadFiles" id="uploadFiles" multiple required>
+		    Vyber soubory/složku:
+		    <div class="inline">
+			<textarea wrap="off" id="uploadInput" readonly></textarea>
+			<button type="button" name="getUploadFiles" id="getUploadFiles">Vyberte soubory</button>
+			<button type="button" name="getUploadFolder" id="getUploadFolder">Vyberte složku</button>
+		    </div>
 		</label>
 
 		<label>
 		    Název torrentu:
-		    <input type="text" name="name" id="name" placeholder="Např. MoewRent v1.0">
+		    <input type="text" name="torrentName" id="torrentName" placeholder="Jméno torrentu">
 		</label>
 
 		<label>
-		    Tracker (announce URL):
-		    <input type="text" name="announce" id="announce" value="udp://tracker.opentrackr.org:1337/announce" required>
-		</label>
-
-		<label>
-		    Další trackery (každý na nový řádek):
-		    <textarea name="announceList" id="announceList" placeholder="udp://tracker.openbittorrent.com:6969/announce&#10;wss://tracker.openwebtorrent.com"></textarea>
+		    URL Trackerů:
+		    <textarea wrap="off" name="announceList" id="announceList">udp://tracker.openbittorrent.com:6969/announce&#10;wss://tracker.openwebtorrent.com</textarea>
 		</label>
 
 		<label>
 		    Komentář:
-		    <textarea name="comment" id="comment" placeholder="Krátký popis torrentu..."></textarea>
+		    <textarea name="torrentComment" id="torrentComment" placeholder="Krátký popis torrentu..."></textarea>
 		</label>
 
 		<label>
 		    Velikost dílků:
 		    <select name="pieceLength" id="pieceLength">
-			<option value="auto" selected>Automaticky</option>
+			<option value="" selected>Automaticky</option> <!--no value because i let the library to decide-->
 			<option value="65536">64 KB</option>
 			<option value="262144">256 KB</option>
 			<option value="1048576">1 MB</option>
@@ -95,16 +94,16 @@
 		</label>
 
 		<label class="inline">
-		    <input type="checkbox" name="private" id="private">
+		    <input type="checkbox" name="privateTorrent" id="privateTorrent">
 		    Soukromý torrent (bez DHT)
 		</label>
 
 		<label class="inline">
-		    <input type="checkbox" name="autoseed" id="autoseed" checked>
+		    <input type="checkbox" name="startSeeding" id="startSeeding" checked>
 		    Automaticky seedovat po vytvoření
 		</label>
 
-		<button type="submit" class="btn-accent">Vytvořit torrent</button>
+		<button type="button" class="btn-accent" id="createTorrentBtn">Vytvořit torrent</button>
 	    </form>
 	</div>
    </div> 

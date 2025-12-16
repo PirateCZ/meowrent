@@ -70,11 +70,12 @@ ipcMain.handle("openForm", () => {
     formWindow.loadURL(FORM_WINDOW_WEBPACK_ENTRY)
 })
 
-ipcMain.handle("openFiles", async () => {
+ipcMain.handle("openFiles", async (event, extensions) => {
+    let filterName = extensions[0] == '*' ? "All Files" : "Torrent Files"
     const result = await dialog.showOpenDialog({
 	properties: ['openFile', 'multiSelections'],
 	filters: [
-	    {name: "Torrent Files", extensions: ['torrent']},
+	    {name: filterName, extensions: extensions},
 	]
     })
 
@@ -158,5 +159,29 @@ ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList
 		console.log(`${torrent.name} is done downloading`)
 	    })
 	})
+
+	formWindow.close()
     }
+})
+
+ipcMain.handle("createTorrent", async (event, itemsToUpload, torrentName, trackerURLs, torrentComment, pieceLength, privateTorrent, startSeeding) => {
+    if(pieceLength != ""){
+	pieceLength = Number(pieceLength)
+    }
+
+    client.seed(itemsToUpload, {
+	name: torrentName,
+	announce: trackerURLs,
+	comment: torrentComment,
+	pieceLength: pieceLength,
+	private: privateTorrent,
+	paused: !startSeeding, //if I want to start seeding I dont want it to be paused
+	createdBy: "Meowrent - PirateCZ"
+    }, (torrent) => {
+	console.log("torrent strted seeding")
+	console.log("Here's the magnet: " + torrent.magnetURI)
+	mainWindow.webContents.send('addTorrentToList', { torrentName: torrent.name })
+    })
+
+    formWindow.close()
 })

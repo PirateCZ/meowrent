@@ -7,10 +7,16 @@ addButton.addEventListener('click', async () => {
     await window.formApi.openForm()
 })
 
+const downloadBar = document.getElementById('progressBar')
+window.interfaceApi.changeDownloadProgress(() => {
+    downloadBar.style.width = `90%`
+})
+
 const torrentList = document.getElementById('torrentList')
 window.interfaceApi.addTorrentToList((event, data) => {
     let torrentDiv = document.createElement('div')
     torrentDiv.classList.add('list-row')
+    torrentDiv.tabIndex = 0
     torrentDiv.id = data.torrentName
 
     let torrentNameCol = document.createElement('div')
