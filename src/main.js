@@ -99,73 +99,36 @@ ipcMain.handle("getDownloadsFolder", async () => {
 })
 
 ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList, startTorrent, topQueue, hashCheck) => {
-    for (let i = 0; i < fileList.length; i++) {
-    	const file = path.resolve(fileList[i])
-	console.log(`File ${i+1}: ${file}`)
+    let torrentList = fileList.concat(linkList)
+    for (let i = 0; i < torrentList.length; i++) {
+    	const torrentThing = torrentList[i]
 
-	client.add(file, {
+	client.add(torrentThing, {
 	    path: saveLocation,
 	    skipVerify: hashCheck,
 	    paused: !startTorrent,
 	}, (torrent) => {
-	    console.log(`${torrent.name} is ready to be downloaded`)
 	    mainWindow.webContents.send('addTorrentToList', { torrentName: torrent.name })
 
 	    let lastDownloadProgress = 0 
 	    torrent.on('download', () => {
 		if(lastDownloadProgress != Math.floor(torrent.progress * 100)){
 		    lastDownloadProgress = Math.floor(torrent.progress * 100)
-		    console.log(`Progress for ${torrent.name}: ${Math.floor(torrent.progress * 100)}%`)
+		    console.log(`Progress for ${torrent.name}: ${lastDownloadProgress}%`)
 		}
 	    })
 
-	    torrent.on('wire', (wire) => {
-		console.log(`Connected torrent ${torrent.name} to peer using ${wire.type} at ip ${wire.remoteAddress}`)
-	    })
-
 	    torrent.on('done', async () => {
-		//await client.remove(file)
 		console.log(`${torrent.name} is done downloading`)
 	    })
 	})
     }
-
-    for (let i = 0; i < linkList.length; i++) {
-    	const link = linkList[i]
-    	console.log(`Link ${i+1}: ${link}`)
-
-	client.add(link, {
-	    path: saveLocation,
-	    skipVerify: hashCheck,
-	    paused: !startTorrent,
-	}, (torrent) => {
-	    console.log(`${torrent.name} is ready to be downloaded`)
-	    mainWindow.webContents.send('addTorrentToList', { torrentName: torrent.name })
-
-	    let lastDownloadProgress = 0 
-	    torrent.on('download', () => {
-		if(lastDownloadProgress != Math.floor(torrent.progress * 100)){
-		    lastDownloadProgress = Math.floor(torrent.progress * 100)
-		    console.log(`Progress for ${torrent.name}: ${Math.floor(torrent.progress * 100)}%`)
-		}
-	    })
-
-	    torrent.on('wire', (wire) => {
-		console.log(`Connected torrent ${torrent.name} to peer using ${wire.type} at ip ${wire.remoteAddress}`)
-	    })
-
-	    torrent.on('done', async () => {
-		//await client.remove(link)
-		console.log(`${torrent.name} is done downloading`)
-	    })
-	})
-
-	formWindow.close()
-    }
+    formWindow.close()
 })
 
 ipcMain.handle("createTorrent", async (event, itemsToUpload, torrentName, trackerURLs, torrentComment, pieceLength, privateTorrent, startSeeding) => {
-    if(pieceLength != ""){
+    const autoValue = ""
+    if(pieceLength != autoValue){
 	pieceLength = Number(pieceLength)
     }
 
