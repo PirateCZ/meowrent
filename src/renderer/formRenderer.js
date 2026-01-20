@@ -89,10 +89,9 @@ downloadTorrentBtn.addEventListener("click", async () => {
     }
 
     let startTorrent = document.getElementById("startTorrent").checked
-    let topQueue = document.getElementById("topQueue").checked
     let hashCheck = document.getElementById("hashCheck").checked
     if(hasFiles || hasLinks){
-	await window.torrentApi.downloadTorrent(saveLocation, filePaths, links, startTorrent, topQueue, hashCheck)
+	await window.torrentApi.downloadTorrent(saveLocation, filePaths, links, startTorrent, hashCheck)
     }
 })
 

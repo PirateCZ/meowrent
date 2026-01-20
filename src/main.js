@@ -19,8 +19,8 @@ if (require('electron-squirrel-startup')) {
 const createWindow = () => {
     // Create the browser window.
     mainWindow = new BrowserWindow({
-	width: 1600,
-	height: 900,
+	width: 1280,
+	height: 720,
 	webPreferences: {
 	    preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
 	},
@@ -58,8 +58,8 @@ app.on('window-all-closed', () => {
 
 ipcMain.handle("openForm", () => {
     formWindow = new BrowserWindow({
-	width: 1280,
-	height: 720,
+	width: 1024,
+	height: 576,
 	parent: mainWindow,
 	modal: true, 
 	webPreferences: {
@@ -98,7 +98,7 @@ ipcMain.handle("getDownloadsFolder", async () => {
     return downloadsFolder
 })
 
-ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList, startTorrent, topQueue, hashCheck) => {
+ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList, startTorrent, hashCheck) => {
     let torrentList = fileList.concat(linkList)
     for (let i = 0; i < torrentList.length; i++) {
     	const torrentThing = torrentList[i]

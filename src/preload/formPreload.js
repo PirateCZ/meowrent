@@ -8,9 +8,9 @@ contextBridge.exposeInMainWorld('dialogApi', {
 
 contextBridge.exposeInMainWorld('torrentApi', {
     downloadTorrent: (
-	saveLocation, fileList, linkList, startTorrent, topQueue, hashCheck
+	saveLocation, fileList, linkList, startTorrent, hashCheck
     ) => ipcRenderer.invoke('downloadTorrent', 
-	saveLocation, fileList, linkList, startTorrent, topQueue, hashCheck
+	saveLocation, fileList, linkList, startTorrent, hashCheck
     ),
 
     createTorrent: (
