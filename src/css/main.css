@@ -126,7 +126,7 @@
 .list-empty {
     padding: 20px;
     text-align: center;
-    color: var(--surface);
+    color: var(--text);
 }
 
 .col { 
