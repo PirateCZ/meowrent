@@ -15,11 +15,14 @@ const client = new WebTorrent(
     }
 )
 
-// Track active torrents and their update intervals
+// Track torrents and their update intervals
 const torrentIntervals = new Map()
 
 // Track torrents that are being added
 const pendingTorrents = new Set()
+
+// Track paused torrents
+const pausedTorrents = new Set()
 
 console.log('Setting up client listeners...')
 
@@ -98,6 +101,69 @@ const stopTorrentUpdates = (torrentId) => {
     if (torrentIntervals.has(torrentId)) {
         clearInterval(torrentIntervals.get(torrentId))
         torrentIntervals.delete(torrentId)
+    }
+}
+
+// Function to pause a torrent
+const pauseTorrent = (torrentId) => {
+    try {
+        const torrent = client.torrents.find(t => t.infoHash === torrentId)
+        if (torrent) {
+            console.log('Pausing torrent:', torrentId)
+            torrent.pause()
+            pausedTorrents.add(torrentId)
+            stopTorrentUpdates(torrentId)
+            
+            console.log('Paused torrent:', torrentId)
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Paused')
+            }
+        } else {
+            console.error('Torrent not found:', torrentId)
+        }
+    } catch (err) {
+        console.error('Error pausing torrent:', err)
+    }
+}
+
+// Function to resume a torrent
+const resumeTorrent = (torrentId) => {
+    try {
+        console.log('Attempting to resume torrent:', torrentId)
+        const torrent = client.torrents.find(t => t.infoHash === torrentId)
+        
+        if (!torrent) {
+            console.error('Torrent not found for resume:', torrentId)
+            return
+        }
+        
+        console.log('Found torrent, resuming...')
+        torrent.resume()
+        pausedTorrents.delete(torrentId)
+        
+        console.log('Torrent resumed, starting updates...')
+        startTorrentUpdates(torrent)
+        
+        if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Connecting')
+            console.log('Sent status update to UI')
+        }
+    } catch (err) {
+        console.error('Error resuming torrent:', err)
+    }
+}
+
+// Function to remove a torrent
+const removeTorrent = (torrentId) => {
+    const torrent = client.get(torrentId)
+    if (torrent) {
+        client.remove(torrentId)
+        stopTorrentUpdates(torrentId)
+        pendingTorrents.delete(torrentId)
+        console.log('Removed torrent:', torrentId)
+        if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('removeTorrentFromList', torrentId)
+        }
     }
 }
 
@@ -453,6 +519,46 @@ ipcMain.handle("createTorrent", async (event, itemsToUpload, torrentName, tracke
         console.error('Error in createTorrent handler:', err)
         throw err
     }
+})
+
+ipcMain.handle("pauseTorrent", (event, torrentId) => {
+    console.log('Pause torrent handler called for:', torrentId)
+    pauseTorrent(torrentId)
+})
+
+ipcMain.handle("resumeTorrent", (event, torrentId) => {
+    console.log('Resume torrent handler called for:', torrentId)
+    resumeTorrent(torrentId)
+})
+
+ipcMain.handle("removeTorrent", (event, torrentId) => {
+    console.log('Remove torrent handler called for:', torrentId)
+    removeTorrent(torrentId)
+})
+
+ipcMain.on("showTorrentContextMenu", (event, torrentId, status) => {
+    const template = [
+        {
+            label: status === 'Paused' ? 'Resume' : 'Pause',
+            click: () => {
+                if (status === 'Paused') {
+                    resumeTorrent(torrentId)
+                } else {
+                    pauseTorrent(torrentId)
+                }
+            }
+        },
+        { type: 'separator' },
+        {
+            label: 'Delete',
+            click: () => {
+                removeTorrent(torrentId)
+            }
+        }
+    ]
+    
+    const menu = Menu.buildFromTemplate(template)
+    menu.popup({ window: mainWindow })
 })
 
 ipcMain.handle("toggleDarkMode", () => {

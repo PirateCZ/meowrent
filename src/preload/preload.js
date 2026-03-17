@@ -22,6 +22,13 @@ contextBridge.exposeInMainWorld('interfaceApi', {
     removeTorrentFromList: (callback) => ipcRenderer.on('removeTorrentFromList', callback),
 })
 
+contextBridge.exposeInMainWorld('torrentControl', {
+    pauseTorrent: (torrentId) => ipcRenderer.invoke('pauseTorrent', torrentId),
+    resumeTorrent: (torrentId) => ipcRenderer.invoke('resumeTorrent', torrentId),
+    removeTorrent: (torrentId) => ipcRenderer.invoke('removeTorrent', torrentId),
+    showContextMenu: (torrentId, status) => ipcRenderer.send('showTorrentContextMenu', torrentId, status),
+})
+
 contextBridge.exposeInMainWorld('onLoad', {
     loadSettings: () => ipcRenderer.invoke('loadSettings')
 })

@@ -240,6 +240,15 @@ window.interfaceApi.addTorrentToList((event, data) => {
     torrentList.appendChild(torrentDiv)
     console.log('Torrent div created and appended:', torrentId)
     updateEmptyState()
+    
+    // Add right-click context menu (Electron native)
+    torrentDiv.addEventListener('contextmenu', (e) => {
+        e.preventDefault()
+        // Get the current status from the torrent manager
+        const currentTorrent = torrentManager.getTorrent(torrentId)
+        const currentStatus = currentTorrent ? currentTorrent.status : data.status
+        window.torrentControl.showContextMenu(torrentId, currentStatus)
+    })
 })
 
 // Listen for torrent data updates
