@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Settings</title>
+	</head>
+	<body>
+	    <div class="settings-container">
+		<!-- LEFT SIDEBAR -->
+		<aside class="settings-sidebar">
+		    <h2 class="settings-title">Nastavení</h2>
+
+		    <button class="settings-tab active" id="generalPageButton">Obecné</button>
+		    <button class="settings-tab" id="downloadsPageButton">Stahování</button>
+		    <button class="settings-tab" id="appearancePageButton">Vzhled</button>
+		    <button class="settings-tab" id="advancedPageButton">Pokročilé</button>
+		</aside>
+
+		<!-- RIGHT CONTENT -->
+		<section class="settings-content" id="generalPage"> 
+		    <h3>Obecné</h3>
+
+			<div class="setting-row">
+			    <div class="setting-text">
+				<span class="setting-name">Start on launch</span>
+				<span class="setting-desc">Automatically start the app with the system</span>
+			    </div>
+			    <label class="switch">
+				<input type="checkbox">
+				<span class="slider"></span>
+			    </label>
+			</div>
+
+			<div class="setting-row">
+			    <div class="setting-text">
+				<span class="setting-name">Confirm before exit</span>
+				<span class="setting-desc">Ask before closing active downloads</span>
+			    </div>
+			    <label class="switch">
+				<input type="checkbox" checked>
+				<span class="slider"></span>
+			    </label>
+			</div>
+
+		</section>
+		<section class="settings-content hidden" id="downloadsPage"> 
+			
+		    <h3>Stahování</h3>
+
+		    <div class="setting-row">
+			<div class="setting-text">
+			    <span class="setting-name">Auto start torrents</span>
+			    <span class="setting-desc">Start downloading immediately after adding</span>
+			</div>
+			<label class="switch">
+			    <input type="checkbox">
+			    <span class="slider"></span>
+			</label>
+		    </div>
+		</section>
+
+		<section class="settings-content hidden" id="appearancePage"> 
+			
+		    <h3>Vzhled</h3>
+
+		    <div class="setting-row">
+			<div class="setting-text">
+			    <span class="setting-name">Tmavý režim</span>
+			    <span class="setting-desc">Změní barvy na tmavé</span>
+			</div>
+			<label class="switch">
+			    <input type="checkbox" id="darkModeCheckbox">
+			    <span class="slider"></span>
+			</label>
+		    </div>
+		    <h4>Barevné styly</h4>
+		    <div class="settings-row">
+			<button class="add-button" id="addButton">
+				Přidat barevný styl
+			</button>
+		    </div>
+		    <div class="setting-row">
+			<div class="theme-select" id="themeSelect">
+				
+			</div>
+
+		    </div>
+		    <div class="setting-row">
+			<div class="setting-text">
+			    <span class="setting-name">Hlavní barva</span>
+			    <span class="setting-desc">První barva aplikace</span>
+			</div>
+			<input type="color" class="color-input" id="primaryColor">
+		    </div>
+
+		    <div class="setting-row">
+			<div class="setting-text">
+			    <span class="setting-name">Sekundární barva</span>
+			    <span class="setting-desc">Druhá barva aplikace</span>
+			</div>
+			<input type="color" class="color-input" id="secondaryColor">
+		    </div>
+		</section>
+
+		<section class="settings-content hidden"id="advancedPage"> 
+			
+		    <h3>Pokročilé</h3>
+
+		    <div class="setting-row">
+			<div class="setting-text">
+			    <span class="setting-name">Auto start torrents</span>
+			    <span class="setting-desc">Start downloading immediately after adding</span>
+			</div>
+			<label class="switch">
+			    <input type="checkbox">
+			    <span class="slider"></span>
+			</label>
+		    </div>
+		</section>
+	    </div>
+	</body>
+</html>

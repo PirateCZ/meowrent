@@ -1,19 +1,23 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, nativeTheme, Menu, MenuItem } = require('electron')
 const path = require('node:path')
 const fs = require('node:fs')
+const { open } = require('node:fs/promises')
 let mainWindow = undefined
 let formWindow = undefined
+let settingsWindow = undefined
+let themeMenu = undefined
 
 import WebTorrent from "webtorrent";
 const client = new WebTorrent(
     {
 	dht: true,
+	utp: false,
     }
 )
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
-    app.quit();
+   app.quit();
 }
 
 const createWindow = () => {
@@ -28,7 +32,6 @@ const createWindow = () => {
 
     // and load the index.html of the app.
     mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
-
     // Open the DevTools.
     //mainWindow.webContents.openDevTools();
 };
@@ -37,6 +40,10 @@ const createWindow = () => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+    let settings = fs.readFileSync("settings.json")
+    let darkMode = JSON.parse(settings).appearance.darkMode
+    let lightnessMode = darkMode ? 'dark' : 'light'
+    nativeTheme.themeSource = lightnessMode
     createWindow();
     // On OS X it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
@@ -70,13 +77,30 @@ ipcMain.handle("openForm", () => {
     formWindow.loadURL(FORM_WINDOW_WEBPACK_ENTRY)
 })
 
+ipcMain.handle("openSettings", () => {
+    settingsWindow = new BrowserWindow({
+	width: 1024,
+	height: 576,
+	parent: mainWindow,
+	modal: true,
+	webPreferences: {
+	    preload: SETTINGS_WINDOW_PRELOAD_WEBPACK_ENTRY,
+	},
+    })
+
+    settingsWindow.loadURL(SETTINGS_WINDOW_WEBPACK_ENTRY)
+
+    settingsWindow.on("close", () => {
+	
+    })
+})
+
 ipcMain.handle("openFiles", async (event, extensions) => {
     let filterName = extensions[0] == '*' ? "All Files" : "Torrent Files"
     const result = await dialog.showOpenDialog({
 	properties: ['openFile', 'multiSelections'],
 	filters: [
-	    {name: filterName, extensions: extensions},
-	]
+	    {name: filterName, extensions: extensions}, ]
     })
 
     if (result.canceled) {
@@ -106,16 +130,16 @@ ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList
 	client.add(torrentThing, {
 	    path: saveLocation,
 	    skipVerify: hashCheck,
-	    paused: !startTorrent,
+	    paused: !startTorrent, //if I want to start seeding I dont want it to be paused
 	}, (torrent) => {
 	    mainWindow.webContents.send('addTorrentToList', { torrentName: torrent.name })
 
-	    let lastDownloadProgress = 0 
 	    torrent.on('download', () => {
 		if(lastDownloadProgress != Math.floor(torrent.progress * 100)){
 		    lastDownloadProgress = Math.floor(torrent.progress * 100)
 		    console.log(`Progress for ${torrent.name}: ${lastDownloadProgress}%`)
 		}
+
 	    })
 
 	    torrent.on('done', async () => {
@@ -147,4 +171,47 @@ ipcMain.handle("createTorrent", async (event, itemsToUpload, torrentName, tracke
     })
 
     formWindow.close()
+})
+
+ipcMain.handle("toggleDarkMode", () => {
+    if (nativeTheme.shouldUseDarkColors) { //if we already have dark mode swithc to light mode
+	nativeTheme.themeSource = 'light'
+    } else {
+	nativeTheme.themeSource = 'dark'
+    }
+    //return nativeTheme.shouldUseDarkColors
+})
+
+ipcMain.handle("setLightnesMode", (event, shouldUseDarkColors) => {
+    let mode = shouldUseDarkColors ? 'dark' : 'light'
+    nativeTheme.themeSource = mode
+})
+
+ipcMain.handle("saveSettingsToJSON", (event, settings) => {
+    fs.writeFile('settings.json', JSON.stringify(settings, null, 4), (err) => {
+	if (err) throw err
+    })
+})
+
+ipcMain.handle("loadSettings", async () => {
+    let settingsFile = await open(path.join(app.getAppPath(), 'settings.json'), 'r')
+
+    let settings = await settingsFile.readFile("utf-8")
+    settingsFile.close()
+    return JSON.parse(settings)
+})
+
+ipcMain.handle("changeMainWindowColor", (event, primaryColor, secondaryColor) => {
+    mainWindow.webContents.send("changeThemeColors", primaryColor, secondaryColor)
+})
+
+ipcMain.handle("themeCircleContextMenu", (event, circleNumber) => {
+    themeMenu = new Menu()
+    themeMenu.append(new MenuItem({ label: 'Delete Theme', click: () => {
+	settingsWindow.webContents.send("deleteTheme", circleNumber)
+    }}))
+
+    themeMenu.popup({
+	window: BrowserWindow.fromWebContents(event.sender)
+    })
 })

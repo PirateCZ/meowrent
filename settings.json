@@ -1,0 +1,45 @@
+{
+    "general": {},
+    "downloads": {},
+    "appearance": {
+        "darkMode": false,
+        "themes": [
+            {
+                "id": 1,
+                "primaryColor": "#8549c3",
+                "secondaryColor": "#9c5edb",
+                "active": false,
+                "default": true
+            },
+            {
+                "id": 2,
+                "primaryColor": "#8549c3",
+                "secondaryColor": "#b890e0",
+                "active": false,
+                "default": false
+            },
+            {
+                "id": 3,
+                "primaryColor": "#8549c3",
+                "secondaryColor": "#b890e0",
+                "active": false,
+                "default": false
+            },
+            {
+                "id": 4,
+                "primaryColor": "#8549c3",
+                "secondaryColor": "#b890e0",
+                "active": false,
+                "default": false
+            },
+            {
+                "id": 5,
+                "primaryColor": "#92d11f",
+                "secondaryColor": "#80a53b",
+                "active": false,
+                "default": false
+            }
+        ]
+    },
+    "advanced": {}
+}

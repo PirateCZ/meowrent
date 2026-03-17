@@ -1,11 +1,33 @@
 import '../css/styles.css';
 import '../css/main.css';
 
-const addButton = document.getElementById('addTorrentBtn')
+document.addEventListener('DOMContentLoaded', async () => {
+    let settings = await window.onLoad.loadSettings()
+    let activeTheme = undefined
+    for (let i = 0; i < settings.appearance.themes.length; i++) {
+    	const theme = settings.appearance.themes[i];
+    	if(theme.active == true) {
+	    activeTheme = theme
+	}
+    }
+    document.documentElement.style.setProperty("--surface", activeTheme.primaryColor)
+    document.documentElement.style.setProperty("--muted", activeTheme.secondaryColor)
+    await window.interfaceApi.setLightnesMode(settings.appearance.darkMode)
 
-addButton.addEventListener('click', async () => {
-    await window.formApi.openForm()
+
 })
+
+
+const addButton = document.getElementById('addTorrentButton')
+addButton.addEventListener('click', async () => {
+    await window.windowApi.openForm()
+})
+
+const settingsButton = document.getElementById('settingsButton')
+settingsButton.addEventListener('click', async () => {
+    await window.windowApi.openSettings()
+})
+
 
 const downloadBar = document.getElementById('progressBar')
 window.interfaceApi.changeDownloadProgress(() => {
@@ -64,3 +86,7 @@ window.interfaceApi.addTorrentToList((event, data) => {
     torrentList.appendChild(torrentDiv)
 })
 
+window.interfaceApi.changeThemeColors((event, primaryColor, secondaryColor) => {
+    document.documentElement.style.setProperty("--surface", primaryColor)
+    document.documentElement.style.setProperty("--muted", secondaryColor)
+})

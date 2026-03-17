@@ -19,3 +19,7 @@ contextBridge.exposeInMainWorld('torrentApi', {
 	itemsToUpload, torrentName, trackerURLs, torrentComment, pieceLength, privateTorrent, startSeeding
     ),
 })
+
+contextBridge.exposeInMainWorld('themeApi', {
+    loadSettings: () => ipcRenderer.invoke('loadSettings')
+})

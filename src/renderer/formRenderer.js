@@ -4,8 +4,8 @@ import '../css/form.css'
 const createBtn = document.getElementById('createBtn')
 const downloadBtn = document.getElementById('downloadBtn')
 
-const createForm = document.getElementById('createFormDiv')
-const downloadForm = document.getElementById('downloadFormDiv')
+const createFormDiv = document.getElementById('createFormDiv')
+const downloadFormDiv = document.getElementById('downloadFormDiv')
 
 const downloadTorrentBtn = document.getElementById("downloadTorrentBtn")
 const downloadTorrentLinksInput = document.getElementById("torrentLinks")
@@ -22,12 +22,25 @@ const uploadFolderBtn = document.getElementById('getUploadFolder')
 const uploadInput = document.getElementById('uploadInput')
 
 document.addEventListener('DOMContentLoaded', async () => {
+
+    let loadedSettings = await window.themeApi.loadSettings()
+    let activeTheme = undefined
+    for (let i = 0; i < loadedSettings.appearance.themes.length; i++) {
+    	const theme = loadedSettings.appearance.themes[i];
+    	if(theme.active == true) {
+	    activeTheme = theme
+	}
+    }
+    document.documentElement.style.setProperty("--surface", activeTheme.primaryColor)
+    document.documentElement.style.setProperty("--muted", activeTheme.secondaryColor)
     saveLocationInput.value = await window.dialogApi.getDownloadsFolder()
 })
 
 createBtn.addEventListener("click", () => {
     createBtn.classList.toggle("activeBtn")
+    createBtn.classList.toggle("inactiveBtn")
     downloadBtn.classList.toggle("activeBtn")
+    downloadBtn.classList.toggle("inactiveBtn")
     createFormDiv.classList.toggle("hidden")
     downloadFormDiv.classList.toggle("hidden")
 })

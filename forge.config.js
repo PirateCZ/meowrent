@@ -46,7 +46,15 @@ module.exports = {
 		name: 'form_window',
 		preload: {
 		    js: './src/preload/formPreload.js',
-		}
+		},
+	    },
+	    {
+		html: './src/html/settings.html',
+		js: './src/renderer/settingsRenderer.js',
+		name: 'settings_window',
+		preload: {
+		    js: './src/preload/settingsPreload.js',
+		},
 	    },
           ],
         },

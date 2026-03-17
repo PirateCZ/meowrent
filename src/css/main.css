@@ -2,6 +2,8 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
+    background-color: var(--bg); 
+    color: var(--text);
 }
 
 .app-title {
@@ -17,9 +19,8 @@
     gap: 12px;
     padding: 0 12px;
     flex-shrink: 0;
-    background: var(--surface);
     color: var(--text);
-    border-bottom: 1px solid var(--muted);
+    border-bottom: 2px solid var(--surface);
 }
 
 .topbar-left, .topbar-center, .topbar-right {
@@ -44,13 +45,13 @@
     max-width: 320px;
     padding: 6px 10px;
     border-radius: 6px;
-    border: 1px solid var(--muted);
+    border: 1px solid var(--surface);
     background: transparent;
     color: var(--text);
 }
 
 .icon-btn, .btn {
-    border: 1px solid var(--muted);
+    border: 1px solid var(--surface);
     background: transparent;
     padding: 6px 8px;
     border-radius: 6px;
@@ -75,7 +76,6 @@
     flex: 1 1 auto;
     overflow: auto;
     justify-content: center;
-    max-width: var(--max-content-width);
     margin: 0 auto;
     width: 100%;
 }
@@ -94,8 +94,7 @@
     border-radius: 8px; 
     padding: 8px;
     overflow: auto;
-    border: 1px solid var(--muted);
-    background: var(--surface);
+    border: 1px solid var(--surface);
     min-height: 200px;
 }
 
@@ -107,7 +106,7 @@
     padding: 8px;
     font-size: 13px;
     font-weight: 600;
-    border-bottom: 1px dashed var(--muted);
+    border-bottom: 1px dashed var(--surface);
 }
 
 .list-row {
@@ -121,13 +120,13 @@
 }
 
 .list-row:focus {
-    outline: 2px solid var(--muted);
+    outline: 2px solid var(--surface);
 }
 
 .list-empty {
     padding: 20px;
     text-align: center;
-    color: var(--muted);
+    color: var(--surface);
 }
 
 .col { 
@@ -156,7 +155,7 @@
     height: 100%;
     width: 0%;
     border-radius: 6px;
-    background: var(--accent);
+    background: var(--muted);
     transition: width 300ms linear;
 }
 
@@ -166,9 +165,8 @@
     align-items:center;
     justify-content:space-between;
     padding: 0 12px;
-    border-top: 1px solid var(--muted);
+    border-top: 2px solid var(--surface);
     flex-shrink: 0;
-    background: var(--surface);
     color: var(--text);
 }
 

@@ -1,15 +1,26 @@
 :root{
-  --bg: #f9f7fc;
-  --surface: #8549c3
-  --text: #0b070f;
-  --muted: #b890e0;
-  --accent:  #9c5edb;
-  --font-family: "Roboto", "Segoe UI", sans-serif;
+    --font-family: "Roboto", "Segoe UI", sans-serif;
+    --surface: #8549c3;
+    --muted: #b890e0;
 }
 
+@media (prefers-color-scheme: light) {
+    :root {
+	--bg: #f5f5f5;
+	--text: #0f0f10;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+	--bg: #0f0f10;
+	--text: #f5f5f5;
+    }
+}
 * { 
     box-sizing: border-box; 
     font-family: var(--font-family);
+    color: var(--text);
 }
 
 
