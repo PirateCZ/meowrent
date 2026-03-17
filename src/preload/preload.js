@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('interfaceApi', {
     updateTorrentSpeed: (callback) => ipcRenderer.on('updateTorrentSpeed', callback),
     updateTorrentPeers: (callback) => ipcRenderer.on('updateTorrentPeers', callback),
     updateTorrentStatus: (callback) => ipcRenderer.on('updateTorrentStatus', callback),
+    updateTorrentName: (callback) => ipcRenderer.on('updateTorrentName', callback),
     updateTorrentSize: (callback) => ipcRenderer.on('updateTorrentSize', callback),
     updateTorrentData: (callback) => ipcRenderer.on('updateTorrentData', callback),
     removeTorrentFromList: (callback) => ipcRenderer.on('removeTorrentFromList', callback),

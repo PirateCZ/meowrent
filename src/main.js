@@ -30,6 +30,13 @@ client.on('error', (err) => {
 
 console.log('✓ Client listeners initialized')
 
+// Utility function to extract filename from path
+const getNameFromPath = (path) => {
+    if (!path) return null
+    const parts = path.replace(/\\/g, '/').split('/')
+    return parts[parts.length - 1]
+}
+
 // Utility function to format bytes
 const formatBytes = (bytes, decimals = 1) => {
     if (bytes === 0) return '0 B'
@@ -241,10 +248,21 @@ ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList
                     // Function to send torrent to UI
                     const sendToUI = () => {
                         if (mainWindow && mainWindow.webContents) {
-                            console.log('Sending to UI:', torrent.name, 'Length:', torrent.length)
+                            let displayName = torrent.name
+                            if (!displayName || displayName.trim() === '') {
+                                // Try to extract filename from the torrent source
+                                if (torrentThing && !torrentThing.startsWith('magnet:')) {
+                                    displayName = getNameFromPath(torrentThing)
+                                }
+                            }
+                            if (!displayName || displayName.trim() === '') {
+                                displayName = torrent.infoHash || 'Unknown Torrent'
+                            }
+                            
+                            console.log('Sending to UI:', displayName, 'Length:', torrent.length)
                             mainWindow.webContents.send('addTorrentToList', {
                                 torrentId: torrentId,
-                                torrentName: torrent.name,
+                                torrentName: displayName,
                                 size: torrent.length ? formatBytes(torrent.length) : 'Calculating...',
                                 progress: Math.round(torrent.progress * 100),
                                 speed: '0 B/s',
@@ -263,10 +281,14 @@ ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList
                             sent = true
                             sendToUI()
                         } else {
-                            // Metadata arrived after initial send - update the size
+                            // Metadata arrived after initial send - update the size and name if needed
                             if (mainWindow && mainWindow.webContents) {
-                                console.log('Updating size for magnet link:', torrent.name)
+                                console.log('Updating size and metadata for torrent:', torrent.name)
                                 mainWindow.webContents.send('updateTorrentSize', torrentId, torrent.length)
+                                // Also update the name in case it was undefined before
+                                if (torrent.name) {
+                                    mainWindow.webContents.send('updateTorrentName', torrentId, torrent.name)
+                                }
                             }
                         }
                     })
@@ -309,6 +331,63 @@ ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList
     }
 })
 
+// Helper function to process a seeded torrent and send it to UI
+const processSeededTorrent = (torrent, torrentId, torrentName, itemsToUpload, startSeeding) => {
+    if (pendingTorrents.has(torrentId)) {
+        console.log('Torrent already pending:', torrentId)
+        return
+    }
+    
+    pendingTorrents.add(torrentId)
+    
+    if (mainWindow && mainWindow.webContents) {
+        // Build display name with multiple fallbacks
+        let displayName = torrentName
+        if (!displayName || displayName.trim() === '') {
+            displayName = torrent.name
+        }
+        if (!displayName || displayName.trim() === '') {
+            // Try to extract filename from the upload path
+            if (itemsToUpload && itemsToUpload.length > 0) {
+                displayName = getNameFromPath(itemsToUpload[0])
+            }
+        }
+        if (!displayName || displayName.trim() === '') {
+            displayName = torrentId || 'Unknown Torrent'
+        }
+        
+        console.log('Sending seeded torrent to UI:', displayName)
+        mainWindow.webContents.send('addTorrentToList', {
+            torrentId: torrentId,
+            torrentName: displayName,
+            size: torrent.length ? formatBytes(torrent.length) : 'Calculating...',
+            progress: Math.round(torrent.progress * 100),
+            speed: '0 B/s',
+            peers: '0 (0)',
+            status: startSeeding ? 'Seeding' : 'Paused'
+        })
+        console.log('✓ Sent to UI')
+    } else {
+        console.error('Cannot send to UI - mainWindow or webContents is not available')
+    }
+    
+    startTorrentUpdates(torrent)
+    
+    torrent.on('done', () => {
+        console.log('Seeding done:', torrent.name)
+        if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Seeding')
+        }
+    })
+
+    torrent.on('error', (err) => {
+        console.error('Seeding error:', err)
+        if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Error')
+        }
+    })
+}
+
 ipcMain.handle("createTorrent", async (event, itemsToUpload, torrentName, trackerURLs, torrentComment, pieceLength, privateTorrent, startSeeding) => {
     try {
         const autoValue = ""
@@ -317,6 +396,9 @@ ipcMain.handle("createTorrent", async (event, itemsToUpload, torrentName, tracke
         }
 
         console.log('Creating torrent:', torrentName)
+        console.log('Items to upload:', itemsToUpload)
+        
+        const torrentsBefore = client.torrents.length
         
         client.seed(itemsToUpload, {
             name: torrentName,
@@ -328,10 +410,44 @@ ipcMain.handle("createTorrent", async (event, itemsToUpload, torrentName, tracke
             createdBy: "Meowrent - PirateCZ"
         })
         
-        console.log('✓ Seeding started for:', torrentName)
+        // Give the client a moment to add the torrent
+        setImmediate(() => {
+            const newTorrents = client.torrents.filter((t, idx) => idx >= torrentsBefore)
+            console.log('Found new seeded torrents:', newTorrents.length)
+            
+            newTorrents.forEach((torrent) => {
+                console.log('Setting up seeded torrent:', torrent.name)
+                
+                let torrentId = torrent.infoHash
+                console.log('Torrent infoHash:', torrentId)
+                
+                // If infoHash is not available yet, wait a bit and try again
+                if (!torrentId) {
+                    console.log('infoHash not available yet, waiting...')
+                    setTimeout(() => {
+                        torrentId = torrent.infoHash
+                        console.log('After wait, infoHash is:', torrentId)
+                        if (!torrentId) {
+                            console.error('SKIPPING: Still no infoHash for:', torrent.name)
+                            return
+                        }
+                        processSeededTorrent(torrent, torrentId, torrentName, itemsToUpload, startSeeding)
+                    }, 100)
+                    return
+                }
+                
+                processSeededTorrent(torrent, torrentId, torrentName, itemsToUpload, startSeeding)
+            })
+        })
         
         if (formWindow) {
-            formWindow.close()
+            // Close the form after a brief delay to ensure messages are sent
+            setTimeout(() => {
+                if (formWindow) {
+                    formWindow.close()
+                    formWindow = null
+                }
+            }, 100)
         }
     } catch (err) {
         console.error('Error in createTorrent handler:', err)

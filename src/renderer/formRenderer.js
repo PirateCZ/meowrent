@@ -30,7 +30,10 @@ console.log('Elements found:', {
     downloadFormDiv: !!downloadFormDiv,
     downloadTorrentBtn: !!downloadTorrentBtn,
     saveLocationInput: !!saveLocationInput,
-    createTorrentBtn: !!createTorrentBtn
+    createTorrentBtn: !!createTorrentBtn,
+    uploadFilesBtn: !!uploadFilesBtn,
+    uploadFolderBtn: !!uploadFolderBtn,
+    uploadInput: !!uploadInput
 })
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -65,139 +68,167 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             console.error('saveLocationInput element not found!')
         }
+
+        // Set up all event listeners NOW that DOM is ready
+        if (createBtn && downloadBtn && createFormDiv && downloadFormDiv) {
+            createBtn.addEventListener("click", () => {
+                createBtn.classList.toggle("activeBtn")
+                createBtn.classList.toggle("inactiveBtn")
+                downloadBtn.classList.toggle("activeBtn")
+                downloadBtn.classList.toggle("inactiveBtn")
+                createFormDiv.classList.toggle("hidden")
+                downloadFormDiv.classList.toggle("hidden")
+            })
+
+            downloadBtn.addEventListener("click", () => {
+                createBtn.classList.toggle("activeBtn")
+                downloadBtn.classList.toggle("activeBtn")
+                createFormDiv.classList.toggle("hidden")
+                downloadFormDiv.classList.toggle("hidden")
+            })
+        }
+
+        if (saveLocationDialogBtn && saveLocationInput) {
+            saveLocationDialogBtn.addEventListener("click", async () => {
+                const folderPath = await window.dialogApi.openFolder()
+                saveLocationInput.value = folderPath 
+            })
+        }
+
+        if (getTorrentFiles && downloadTorrentFilesInput) {
+            getTorrentFiles.addEventListener("click", async () => {
+                let filePaths = await window.dialogApi.openFiles(['torrent'])
+                let filePlaceholder = ""
+                for (let i = 0; i < filePaths.length; i++) {
+                    filePlaceholder += filePaths[i] + "\n";
+                }
+                downloadTorrentFilesInput.value = filePlaceholder
+            })
+        }
+
+        if (uploadFilesBtn && uploadInput) {
+            uploadFilesBtn.addEventListener("click", async () => {
+                let filePaths = await window.dialogApi.openFiles(['*'])
+                let filePlaceholder = ""
+                for (let i = 0; i < filePaths.length; i++) {
+                    filePlaceholder += filePaths[i] + "\n";
+                }
+                uploadInput.value = filePlaceholder
+                console.log('Upload files set:', uploadInput.value)
+            })
+        } else {
+            console.error('uploadFilesBtn or uploadInput not found!')
+        }
+
+        if (uploadFolderBtn && uploadInput) {
+            uploadFolderBtn.addEventListener("click", async () => {
+                const folderPath = await window.dialogApi.openFolder()
+                console.log('Selected folder:', folderPath)
+                uploadInput.value = folderPath
+                console.log('Upload folder set:', uploadInput.value)
+            })
+        } else {
+            console.error('uploadFolderBtn or uploadInput not found!')
+        }
+
+        if (downloadTorrentBtn && downloadTorrentFilesInput && downloadTorrentLinksInput && saveLocationInput) {
+            downloadTorrentBtn.addEventListener("click", async () => {
+                try {
+                    console.log('Download torrent button clicked')
+                    
+                    let saveLocation = saveLocationInput.value
+                    console.log('Save location:', saveLocation)
+                    
+                    let hasFiles = false
+                    let hasLinks = false
+                    
+                    let filePaths = downloadTorrentFilesInput.value.split("\n")
+                    if(filePaths[filePaths.length-1] == ""){
+                        filePaths.pop()
+                    }
+                    if(filePaths.length > 0){
+                        hasFiles = true
+                    }
+
+                    let links = downloadTorrentLinksInput.value.split("\n")
+                    if(links[links.length-1] == ""){
+                        links.pop()
+                    }
+                    if(links.length > 0){
+                        hasLinks = true
+                    }
+
+                    console.log('Has files:', hasFiles, 'Has links:', hasLinks)
+                    
+                    if(!hasFiles && !hasLinks) {
+                        console.error('No files or links provided')
+                        alert('Prosím, vložte soubor nebo odkaz')
+                        return
+                    }
+
+                    let startTorrent = document.getElementById("startTorrent").checked
+                    let hashCheck = document.getElementById("hashCheck").checked
+                    
+                    console.log('Calling downloadTorrent with:', {saveLocation, filePaths, links, startTorrent, hashCheck})
+                    await window.torrentApi.downloadTorrent(saveLocation, filePaths, links, startTorrent, hashCheck)
+                    console.log('Download torrent completed')
+                } catch (err) {
+                    console.error('Error downloading torrent:', err)
+                    alert('Chyba při stahování: ' + err.message)
+                }
+            })
+        }
+
+        if (createTorrentBtn) {
+            createTorrentBtn.addEventListener('click', async () => {
+                try {
+                    console.log('Create torrent button clicked')
+                    
+                    if (!uploadInput) {
+                        console.error('uploadInput element not found')
+                        alert('Chyba: uploadInput element not found')
+                        return
+                    }
+
+                    let itemsToUpload = uploadInput.value.split("\n")
+                    if(itemsToUpload[itemsToUpload.length-1] == ""){
+                        itemsToUpload.pop()	
+                    }
+
+                    if(itemsToUpload.length === 0) {
+                        console.error('No items selected for upload')
+                        alert('Prosím, vyberte soubory nebo složku')
+                        return
+                    }
+
+                    let torrentName = document.getElementById("torrentName").value
+                    if(!torrentName || torrentName.trim() === '') {
+                        console.error('No torrent name provided')
+                        alert('Prosím, vložte název torrentu')
+                        return
+                    }
+
+                    let trackerURLs = document.getElementById("announceList").value.split("\n")
+                    if(trackerURLs[trackerURLs.length-1] == ""){
+                        trackerURLs.pop()	
+                    }
+                    
+                    let torrentComment = document.getElementById("torrentComment").value
+                    let pieceLength = document.getElementById("pieceLength").value
+                    let privateTorrent = document.getElementById("privateTorrent").checked
+                    let startSeeding = document.getElementById("startSeeding").checked
+
+                    console.log('Calling createTorrent with:', {itemsToUpload, torrentName, trackerURLs, privateTorrent, startSeeding})
+                    
+                    await window.torrentApi.createTorrent(itemsToUpload, torrentName, trackerURLs, torrentComment, pieceLength, privateTorrent, startSeeding)
+                    console.log('Create torrent completed')
+                } catch (err) {
+                    console.error('Error creating torrent:', err)
+                    alert('Chyba při vytváření torrentu: ' + err.message)
+                }
+            })
+        }
     } catch (err) {
         console.error('Error in DOMContentLoaded:', err)
-    }
-})
-
-createBtn.addEventListener("click", () => {
-    createBtn.classList.toggle("activeBtn")
-    createBtn.classList.toggle("inactiveBtn")
-    downloadBtn.classList.toggle("activeBtn")
-    downloadBtn.classList.toggle("inactiveBtn")
-    createFormDiv.classList.toggle("hidden")
-    downloadFormDiv.classList.toggle("hidden")
-})
-
-downloadBtn.addEventListener("click", () => {
-    createBtn.classList.toggle("activeBtn")
-    downloadBtn.classList.toggle("activeBtn")
-    createFormDiv.classList.toggle("hidden")
-    downloadFormDiv.classList.toggle("hidden")
-})
-
-saveLocationDialogBtn.addEventListener("click", async () => {
-    const folderPath = await window.dialogApi.openFolder()
-    saveLocationInput.value = folderPath 
-})
-
-getTorrentFiles.addEventListener("click", async () => {
-    let filePaths = await window.dialogApi.openFiles(['torrent'])
-    let filePlaceholder = ""
-    for (let i = 0; i < filePaths.length; i++) {
-    	  filePlaceholder += filePaths[i] + "\n";
-    }
-    downloadTorrentFilesInput.value = filePlaceholder
-})
-
-uploadFilesBtn.addEventListener("click", async () => {
-    let filePaths = await window.dialogApi.openFiles(['*'])
-    let filePlaceholder = ""
-    for (let i = 0; i < filePaths.length; i++) {
-    	  filePlaceholder += filePaths[i] + "\n";
-    }
-    uploadInput.value = filePlaceholder
-})
-
-uploadFolderBtn.addEventListener("click", async () => {
-    const folderPath = await window.dialogApi.openFolder()
-    uploadInput.value = folderPath
-})
-
-downloadTorrentBtn.addEventListener("click", async () => {
-    try {
-        console.log('Download torrent button clicked')
-        
-        let saveLocation = saveLocationInput.value
-        console.log('Save location:', saveLocation)
-        
-        let hasFiles = false
-        let hasLinks = false
-        
-        let filePaths = downloadTorrentFilesInput.value.split("\n")
-        if(filePaths[filePaths.length-1] == ""){
-            filePaths.pop()
-        }
-        if(filePaths.length > 0){
-            hasFiles = true
-        }
-
-        let links = downloadTorrentLinksInput.value.split("\n")
-        if(links[links.length-1] == ""){
-            links.pop()
-        }
-        if(links.length > 0){
-            hasLinks = true
-        }
-
-        console.log('Has files:', hasFiles, 'Has links:', hasLinks)
-        
-        if(!hasFiles && !hasLinks) {
-            console.error('No files or links provided')
-            alert('Prosím, vložte soubor nebo odkaz')
-            return
-        }
-
-        let startTorrent = document.getElementById("startTorrent").checked
-        let hashCheck = document.getElementById("hashCheck").checked
-        
-        console.log('Calling downloadTorrent with:', {saveLocation, filePaths, links, startTorrent, hashCheck})
-        await window.torrentApi.downloadTorrent(saveLocation, filePaths, links, startTorrent, hashCheck)
-        console.log('Download torrent completed')
-    } catch (err) {
-        console.error('Error downloading torrent:', err)
-        alert('Chyba při stahování: ' + err.message)
-    }
-})
-
-createTorrentBtn.addEventListener('click', async () => {
-    try {
-        console.log('Create torrent button clicked')
-        
-        let itemsToUpload = uploadInput.value.split("\n")
-        if(itemsToUpload[itemsToUpload.length-1] == ""){
-            itemsToUpload.pop()	
-        }
-
-        if(itemsToUpload.length === 0) {
-            console.error('No items selected for upload')
-            alert('Prosím, vyberte soubory nebo složku')
-            return
-        }
-
-        let torrentName = document.getElementById("torrentName").value
-        if(!torrentName || torrentName.trim() === '') {
-            console.error('No torrent name provided')
-            alert('Prosím, vložte název torrentu')
-            return
-        }
-
-        let trackerURLs = document.getElementById("announceList").value.split("\n")
-        if(trackerURLs[trackerURLs.length-1] == ""){
-            trackerURLs.pop()	
-        }
-        
-        let torrentComment = document.getElementById("torrentComment").value
-        let pieceLength = document.getElementById("pieceLength").value
-        let privateTorrent = document.getElementById("privateTorrent").checked
-        let startSeeding = document.getElementById("startSeeding").checked
-
-        console.log('Calling createTorrent with:', {itemsToUpload, torrentName, trackerURLs, privateTorrent, startSeeding})
-        
-        await window.torrentApi.createTorrent(itemsToUpload, torrentName, trackerURLs, torrentComment, pieceLength, privateTorrent, startSeeding)
-        console.log('Create torrent completed')
-    } catch (err) {
-        console.error('Error creating torrent:', err)
-        alert('Chyba při vytváření torrentu: ' + err.message)
     }
 })

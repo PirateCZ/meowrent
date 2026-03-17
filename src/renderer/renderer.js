@@ -95,6 +95,14 @@ const updateTorrentDOM = (torrentId, torrentData) => {
             sizeCol.innerText = torrentData.size;
         }
     }
+
+    // Update name
+    if (torrentData.name !== undefined) {
+        const nameCol = torrentElement.querySelector('#name');
+        if (nameCol) {
+            nameCol.innerText = torrentData.name;
+        }
+    }
 };
 
 const formatBytes = (bytes, decimals = 1) => {
@@ -255,6 +263,11 @@ window.interfaceApi.updateTorrentPeers((event, torrentId, connected, total) => {
 window.interfaceApi.updateTorrentStatus((event, torrentId, status) => {
     torrentManager.updateTorrent(torrentId, { status });
     updateTorrentDOM(torrentId, { status });
+})
+
+window.interfaceApi.updateTorrentName((event, torrentId, name) => {
+    torrentManager.updateTorrent(torrentId, { name });
+    updateTorrentDOM(torrentId, { name });
 })
 
 window.interfaceApi.updateTorrentSize((event, torrentId, bytes) => {
