@@ -13,11 +13,11 @@ class TorrentManager {
         this.torrents.set(torrentId, {
             id: torrentId,
             name: torrentName,
-            size: torrentData.size || 'Unknown',
+            size: torrentData.size || 'Neznámo',
             progress: torrentData.progress || 0,
             speed: torrentData.speed || '0 B/s',
             peers: torrentData.peers || '0 (0)',
-            status: torrentData.status || 'Waiting',
+            status: torrentData.status || 'Čekání',
             downloadedBytes: torrentData.downloadedBytes || 0,
             totalBytes: torrentData.totalBytes || 0
         });
@@ -62,6 +62,10 @@ const updateTorrentDOM = (torrentId, torrentData) => {
         if (progressFill) {
             progressFill.style.width = `${torrentData.progress}%`;
         }
+        const progressText = torrentElement.querySelector('.progress-text');
+        if (progressText) {
+            progressText.innerText = `${torrentData.progress}%`;
+        }
     }
 
     // Update speed
@@ -95,14 +99,6 @@ const updateTorrentDOM = (torrentId, torrentData) => {
             sizeCol.innerText = torrentData.size;
         }
     }
-
-    // Update name
-    if (torrentData.name !== undefined) {
-        const nameCol = torrentElement.querySelector('#name');
-        if (nameCol) {
-            nameCol.innerText = torrentData.name;
-        }
-    }
 };
 
 const formatBytes = (bytes, decimals = 1) => {
@@ -112,6 +108,85 @@ const formatBytes = (bytes, decimals = 1) => {
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+};
+
+// Context menu for torrents
+let currentContextMenu = null;
+
+const showContextMenu = (event, torrentId, torrentName) => {
+    // Remove old menu if exists
+    if (currentContextMenu) {
+        currentContextMenu.remove();
+    }
+
+    const menu = document.createElement('div');
+    menu.className = 'context-menu';
+    menu.style.left = event.clientX + 'px';
+    menu.style.top = event.clientY + 'px';
+
+    const torrent = torrentManager.getTorrent(torrentId);
+    const isPaused = torrent && torrent.status === 'Pozastaveno';
+
+    const menuItems = [
+        isPaused 
+            ? { label: 'Obnovit', action: () => resumeTorrentAction(torrentId) }
+            : { label: 'Pozastavit', action: () => pauseTorrentAction(torrentId) },
+        { label: 'Kopírovat název', action: () => copyToClipboard(torrentName) },
+        { label: 'Odstranit', action: () => removeTorrent(torrentId), danger: true }
+    ];
+
+    menuItems.forEach(item => {
+        const menuItem = document.createElement('div');
+        menuItem.className = 'context-menu-item' + (item.danger ? ' danger' : '');
+        menuItem.innerText = item.label;
+        menuItem.addEventListener('click', () => {
+            item.action();
+            menu.remove();
+            currentContextMenu = null;
+        });
+        menu.appendChild(menuItem);
+    });
+
+    document.body.appendChild(menu);
+    currentContextMenu = menu;
+
+    // Close menu when clicking elsewhere
+    const closeMenu = (e) => {
+        if (!menu.contains(e.target) && e.target.id !== 'torrentList') {
+            menu.remove();
+            currentContextMenu = null;
+            document.removeEventListener('click', closeMenu);
+        }
+    };
+    
+    setTimeout(() => {
+        document.addEventListener('click', closeMenu);
+    }, 0);
+};
+
+const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+        console.log('Copied to clipboard:', text);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+    });
+};
+
+const removeTorrent = (torrentId) => {
+    const torrentElement = document.getElementById(torrentId);
+    if (torrentElement) {
+        if (confirm('Opravdu chceš odstranit tento torrent?')) {
+            window.torrentControl.removeTorrent(torrentId);
+        }
+    }
+};
+
+const pauseTorrentAction = (torrentId) => {
+    window.torrentControl.pauseTorrent(torrentId);
+};
+
+const resumeTorrentAction = (torrentId) => {
+    window.torrentControl.resumeTorrent(torrentId);
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -126,7 +201,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.documentElement.style.setProperty("--surface", activeTheme.primaryColor)
     document.documentElement.style.setProperty("--muted", activeTheme.secondaryColor)
     await window.interfaceApi.setLightnesMode(settings.appearance.darkMode)
-
+    
+    // Add event listeners for external links
+    const links = document.querySelectorAll('a[href^="http"]')
+    links.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault()
+            const url = link.getAttribute('href')
+            if (window.externalLinks) {
+                window.externalLinks.openUrl(url)
+            }
+        })
+    })
 })
 
 
@@ -146,20 +232,8 @@ window.interfaceApi.changeDownloadProgress(() => {
 })
 
 const torrentList = document.getElementById('torrentList')
-const emptyState = document.getElementById('emptyState')
 if (!torrentList) {
     console.error('ERROR: torrentList element not found!')
-}
-
-// Helper function to show/hide empty state
-const updateEmptyState = () => {
-    if (!emptyState) return
-    const torrentRows = torrentList.querySelectorAll('.list-row')
-    if (torrentRows.length === 0) {
-        emptyState.style.display = 'flex'
-    } else {
-        emptyState.style.display = 'none'
-    }
 }
 
 console.log('Setting up addTorrentToList listener...')
@@ -174,20 +248,13 @@ window.interfaceApi.addTorrentToList((event, data) => {
     
     const torrentId = data.torrentId;
     
-    // Check if this torrent is already in the list
-    const existingTorrent = document.getElementById(torrentId)
-    if (existingTorrent) {
-        console.log('Torrent already in list:', torrentId)
-        return
-    }
-    
     // Add to torrent manager
     torrentManager.addTorrent(torrentId, data.torrentName, {
-        size: data.size || 'Calculating...',
+        size: data.size || 'Výpočet...',
         progress: data.progress || 0,
         speed: data.speed || '0 B/s',
         peers: data.peers || '0 (0)',
-        status: data.status || 'Connecting...'
+        status: data.status || 'Připojování...'
     });
 
     let torrentDiv = document.createElement('div')
@@ -203,7 +270,7 @@ window.interfaceApi.addTorrentToList((event, data) => {
     let torrentSizeCol = document.createElement('div')
     torrentSizeCol.classList.add('col')
     torrentSizeCol.id = 'size'
-    torrentSizeCol.innerText = data.size || 'Calculating...'
+    torrentSizeCol.innerText = data.size || 'Výpočet...'
     
     let torrentProgressCol = document.createElement('div')
     torrentProgressCol.classList.add('col')
@@ -212,6 +279,7 @@ window.interfaceApi.addTorrentToList((event, data) => {
 	`
 	<div class="progress-bar">
 	    <div class="progress-fill" style="width:${data.progress || 0}%"></div>
+	    <span class="progress-text">${data.progress || 0}%</span>
 	</div>
 	`
     
@@ -228,7 +296,7 @@ window.interfaceApi.addTorrentToList((event, data) => {
     let torrentStatusCol = document.createElement('div')
     torrentStatusCol.classList.add('col')
     torrentStatusCol.id = 'status'
-    torrentStatusCol.innerText = data.status || 'Connecting...'
+    torrentStatusCol.innerText = data.status || 'Připojování...'
     
     torrentDiv.appendChild(torrentNameCol)
     torrentDiv.appendChild(torrentSizeCol)
@@ -239,15 +307,17 @@ window.interfaceApi.addTorrentToList((event, data) => {
 
     torrentList.appendChild(torrentDiv)
     console.log('Torrent div created and appended:', torrentId)
-    updateEmptyState()
     
-    // Add right-click context menu (Electron native)
+    // Hide empty state when first torrent is added
+    const emptyState = document.getElementById('emptyState')
+    if (emptyState) {
+        emptyState.style.display = 'none'
+    }
+    
+    // Add context menu listener for right-click
     torrentDiv.addEventListener('contextmenu', (e) => {
         e.preventDefault()
-        // Get the current status from the torrent manager
-        const currentTorrent = torrentManager.getTorrent(torrentId)
-        const currentStatus = currentTorrent ? currentTorrent.status : data.status
-        window.torrentControl.showContextMenu(torrentId, currentStatus)
+        showContextMenu(e, torrentId, data.torrentName)
     })
 })
 
@@ -274,11 +344,6 @@ window.interfaceApi.updateTorrentStatus((event, torrentId, status) => {
     updateTorrentDOM(torrentId, { status });
 })
 
-window.interfaceApi.updateTorrentName((event, torrentId, name) => {
-    torrentManager.updateTorrent(torrentId, { name });
-    updateTorrentDOM(torrentId, { name });
-})
-
 window.interfaceApi.updateTorrentSize((event, torrentId, bytes) => {
     const formattedSize = formatBytes(bytes);
     torrentManager.updateTorrent(torrentId, { size: formattedSize });
@@ -289,6 +354,7 @@ window.interfaceApi.updateTorrentData((event, torrentId, torrentData) => {
     const updated = torrentManager.updateTorrent(torrentId, torrentData);
     if (updated) {
         updateTorrentDOM(torrentId, torrentData);
+        updateStatusBar(); // Update status bar on torrent data change
     }
 })
 
@@ -298,10 +364,66 @@ window.interfaceApi.removeTorrentFromList((event, torrentId) => {
         torrentElement.remove();
     }
     torrentManager.removeTorrent(torrentId);
-    updateEmptyState();
+    updateStatusBar(); // Update status bar when torrent is removed
+    
+    // Show empty state if no torrents left
+    const torrents = torrentManager.getAllTorrents();
+    if (torrents.length === 0) {
+        const emptyState = document.getElementById('emptyState');
+        if (emptyState) {
+            emptyState.style.display = 'block';
+        }
+    }
 })
 
 window.interfaceApi.changeThemeColors((event, primaryColor, secondaryColor) => {
     document.documentElement.style.setProperty("--surface", primaryColor)
     document.documentElement.style.setProperty("--muted", secondaryColor)
 })
+
+// Status bar update function
+const updateStatusBar = () => {
+    const statusLeft = document.querySelector('.status-left')
+    const statusCenter = document.querySelector('.status-center')
+    
+    if (!statusLeft || !statusCenter) return
+    
+    const torrents = torrentManager.getAllTorrents()
+    
+    // Calculate total speed (in Bytes per second)
+    let totalDownloadSpeed = 0
+    let totalUploadSpeed = 0
+    let totalPeers = 0
+    let activeTorrents = 0
+    
+    torrents.forEach(torrent => {
+        // Extract speed value from formatted string (e.g., "5 MB/s" -> 5242880)
+        const speedMatch = torrent.speed.match(/^([\d.]+)\s+([KMGT]?B)/);
+        if (speedMatch) {
+            const value = parseFloat(speedMatch[1]);
+            const unit = speedMatch[2];
+            const multipliers = { 'B': 1, 'KB': 1024, 'MB': 1048576, 'GB': 1073741824, 'TB': 1099511627776 };
+            totalDownloadSpeed += value * (multipliers[unit] || 1);
+        }
+        
+        // Extract peer count from "X (Y)" format
+        const peersMatch = torrent.peers.match(/^(\d+)/);
+        if (peersMatch) {
+            totalPeers += parseInt(peersMatch[1]);
+        }
+        
+        if (torrent.status === 'Stahování' || torrent.status === 'Sdílení') {
+            activeTorrents++
+        }
+    })
+    
+    // Format speeds
+    const downloadText = formatBytes(totalDownloadSpeed, 0) + '/s'
+    const uploadText = formatBytes(totalUploadSpeed, 0) + '/s'
+    
+    statusLeft.innerText = `\u2B0B: ${downloadText} \u2191: ${uploadText}`
+    statusCenter.innerText = `Aktivní: ${activeTorrents} | Celkem peerů: ${totalPeers}`
+}
+
+// Update status bar every second
+setInterval(updateStatusBar, 1000)

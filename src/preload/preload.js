@@ -32,3 +32,7 @@ contextBridge.exposeInMainWorld('torrentControl', {
 contextBridge.exposeInMainWorld('onLoad', {
     loadSettings: () => ipcRenderer.invoke('loadSettings')
 })
+
+contextBridge.exposeInMainWorld('externalLinks', {
+    openUrl: (url) => ipcRenderer.invoke('openExternal', url)
+})

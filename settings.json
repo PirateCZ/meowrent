@@ -1,6 +1,12 @@
 {
-    "general": {},
-    "downloads": {},
+    "general": {
+        "startOnLaunch": false,
+        "confirmBeforeExit": false
+    },
+    "downloads": {
+        "downloadFolder": "C:\\Users\\fscho\\Downloads",
+        "autoStart": false
+    },
     "appearance": {
         "darkMode": false,
         "themes": [
@@ -8,38 +14,56 @@
                 "id": 1,
                 "primaryColor": "#8549c3",
                 "secondaryColor": "#9c5edb",
-                "active": false,
-                "default": true
+                "active": true,
+                "default": true,
+                "name": "Purple"
             },
             {
                 "id": 2,
-                "primaryColor": "#8549c3",
-                "secondaryColor": "#b890e0",
+                "primaryColor": "#60a53b",
+                "secondaryColor": "#8bc34a",
                 "active": false,
-                "default": false
+                "default": true,
+                "name": "Green"
             },
             {
                 "id": 3,
-                "primaryColor": "#8549c3",
-                "secondaryColor": "#b890e0",
+                "primaryColor": "#2196f3",
+                "secondaryColor": "#42a5f5",
                 "active": false,
-                "default": false
+                "default": true,
+                "name": "Blue"
             },
             {
                 "id": 4,
-                "primaryColor": "#8549c3",
-                "secondaryColor": "#b890e0",
+                "primaryColor": "#ff6f00",
+                "secondaryColor": "#ffb74d",
                 "active": false,
-                "default": false
+                "default": true,
+                "name": "Orange"
             },
             {
                 "id": 5,
-                "primaryColor": "#92d11f",
-                "secondaryColor": "#80a53b",
+                "primaryColor": "#d32f2f",
+                "secondaryColor": "#ef5350",
+                "active": false,
+                "default": true,
+                "name": "Red"
+            },
+            {
+                "id": 100,
+                "primaryColor": "#8549c3",
+                "secondaryColor": "#8c74a4",
                 "active": false,
                 "default": false
             }
         ]
     },
-    "advanced": {}
+    "advanced": {
+        "history": {
+            "torrents": [],
+            "maxSize": 100,
+            "enabled": true
+        }
+    }
 }

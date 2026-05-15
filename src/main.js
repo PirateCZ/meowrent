@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, nativeTheme, Menu, MenuItem } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, nativeTheme, Menu, MenuItem, shell } = require('electron')
 const path = require('node:path')
 const fs = require('node:fs')
 const { open } = require('node:fs/promises')
@@ -15,14 +15,11 @@ const client = new WebTorrent(
     }
 )
 
-// Track torrents and their update intervals
+// Track active torrents and their update intervals
 const torrentIntervals = new Map()
 
 // Track torrents that are being added
 const pendingTorrents = new Set()
-
-// Track paused torrents
-const pausedTorrents = new Set()
 
 console.log('Setting up client listeners...')
 
@@ -32,13 +29,6 @@ client.on('error', (err) => {
 })
 
 console.log('✓ Client listeners initialized')
-
-// Utility function to extract filename from path
-const getNameFromPath = (path) => {
-    if (!path) return null
-    const parts = path.replace(/\\/g, '/').split('/')
-    return parts[parts.length - 1]
-}
 
 // Utility function to format bytes
 const formatBytes = (bytes, decimals = 1) => {
@@ -72,16 +62,17 @@ const startTorrentUpdates = (torrent) => {
         const connectedPeers = torrent.numPeers || 0
         const totalPeers = torrent.discovered || 0
         const speedFormatted = formatBytes(speed, 0) + '/s'
+        const size = torrent.length ? formatBytes(torrent.length) : 'Výpočet...'
 
-        let status = 'Waiting'
+        let status = 'Čekání'
         if (torrent.paused) {
-            status = 'Paused'
+            status = 'Pozastaveno'
         } else if (progress === 100) {
-            status = 'Seeding'
+            status = 'Sdílení'
         } else if (speed > 0) {
-            status = 'Downloading'
+            status = 'Stahování'
         } else if (connectedPeers > 0) {
-            status = 'Connecting'
+            status = 'Připojování'
         }
 
         // Send batch update
@@ -89,6 +80,7 @@ const startTorrentUpdates = (torrent) => {
             progress,
             speed: speedFormatted,
             peers: `${connectedPeers} (${totalPeers})`,
+            size,
             status
         })
     }, 1000) // Update every second
@@ -104,66 +96,61 @@ const stopTorrentUpdates = (torrentId) => {
     }
 }
 
-// Function to pause a torrent
-const pauseTorrent = (torrentId) => {
+// Function to load torrent history from history.json
+const loadTorrentHistory = async () => {
     try {
-        const torrent = client.torrents.find(t => t.infoHash === torrentId)
-        if (torrent) {
-            console.log('Pausing torrent:', torrentId)
-            torrent.pause()
-            pausedTorrents.add(torrentId)
-            stopTorrentUpdates(torrentId)
-            
-            console.log('Paused torrent:', torrentId)
-            if (mainWindow && mainWindow.webContents) {
-                mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Paused')
-            }
-        } else {
-            console.error('Torrent not found:', torrentId)
-        }
-    } catch (err) {
-        console.error('Error pausing torrent:', err)
+        const historyFile = await open(path.join(app.getAppPath(), 'history.json'), 'r')
+        const historyContent = await historyFile.readFile('utf-8')
+        historyFile.close()
+        const history = JSON.parse(historyContent)
+        return history.torrents || []
+    } catch (error) {
+        console.error('Error loading torrent history:', error)
+        return []
     }
 }
 
-// Function to resume a torrent
-const resumeTorrent = (torrentId) => {
+// Function to add a torrent to history
+const addTorrentToHistory = async (torrentName, magnetLink) => {
     try {
-        console.log('Attempting to resume torrent:', torrentId)
-        const torrent = client.torrents.find(t => t.infoHash === torrentId)
+        let history = { torrents: [], maxSize: 100, enabled: true }
+        const historyPath = path.join(app.getAppPath(), 'history.json')
         
-        if (!torrent) {
-            console.error('Torrent not found for resume:', torrentId)
+        // Try to load existing history
+        try {
+            const historyFile = await open(historyPath, 'r')
+            const historyContent = await historyFile.readFile('utf-8')
+            historyFile.close()
+            history = JSON.parse(historyContent)
+        } catch (err) {
+            // File doesn't exist yet, use defaults
+            console.log('Creating new history.json file')
+        }
+        
+        // Check if history is enabled
+        if (!history.enabled) {
             return
         }
         
-        console.log('Found torrent, resuming...')
-        torrent.resume()
-        pausedTorrents.delete(torrentId)
-        
-        console.log('Torrent resumed, starting updates...')
-        startTorrentUpdates(torrent)
-        
-        if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Connecting')
-            console.log('Sent status update to UI')
+        const maxSize = history.maxSize || 100
+        const newEntry = {
+            name: torrentName,
+            magnetLink: magnetLink,
+            addedDate: Date.now()
         }
-    } catch (err) {
-        console.error('Error resuming torrent:', err)
-    }
-}
-
-// Function to remove a torrent
-const removeTorrent = (torrentId) => {
-    const torrent = client.get(torrentId)
-    if (torrent) {
-        client.remove(torrentId)
-        stopTorrentUpdates(torrentId)
-        pendingTorrents.delete(torrentId)
-        console.log('Removed torrent:', torrentId)
-        if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('removeTorrentFromList', torrentId)
-        }
+        
+        // Add to beginning of history
+        history.torrents.unshift(newEntry)
+        
+        // Keep only the latest maxSize entries
+        history.torrents = history.torrents.slice(0, maxSize)
+        
+        // Save updated history
+        fs.writeFile(historyPath, JSON.stringify(history, null, 4), (err) => {
+            if (err) console.error('Error saving torrent history:', err)
+        })
+    } catch (error) {
+        console.error('Error adding torrent to history:', error)
     }
 }
 
@@ -186,6 +173,35 @@ const createWindow = () => {
     mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
     // Open the DevTools.
     //mainWindow.webContents.openDevTools();
+    
+    // Handle window close with confirm before exit setting
+    mainWindow.on('close', (event) => {
+        // Load settings synchronously
+        try {
+            const settingsFile = fs.readFileSync("settings.json", 'utf-8')
+            const settings = JSON.parse(settingsFile)
+            
+            if (settings.general?.confirmBeforeExit) {
+                event.preventDefault()
+                
+                const result = dialog.showMessageBoxSync(mainWindow, {
+                    type: 'question',
+                    buttons: ['Zůstat', 'Zavřít'],
+                    defaultId: 0,
+                    title: 'Potvrdit zavření',
+                    message: 'Jste si jisti, že chcete zavřít aplikaci?',
+                    detail: 'Máte aktivní stahování.'
+                })
+                
+                if (result === 1) {
+                    mainWindow.destroy()
+                }
+            }
+        } catch (error) {
+            console.error('Error in window close handler:', error)
+            // If error, just close normally
+        }
+    })
 };
 
 // This method will be called when Electron has finished
@@ -193,9 +209,19 @@ const createWindow = () => {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
     let settings = fs.readFileSync("settings.json")
-    let darkMode = JSON.parse(settings).appearance.darkMode
+    let parsedSettings = JSON.parse(settings)
+    let darkMode = parsedSettings.appearance.darkMode
     let lightnessMode = darkMode ? 'dark' : 'light'
     nativeTheme.themeSource = lightnessMode
+    
+    // Handle start on launch setting
+    const startOnLaunch = parsedSettings.general?.startOnLaunch || false
+    app.setLoginItemSettings({
+        openAtLogin: startOnLaunch,
+        path: process.execPath,
+        args: [app.getAppPath()]
+    })
+    
     createWindow();
     // On OS X it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
@@ -303,38 +329,22 @@ ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList
                     
                     const torrentId = torrent.infoHash
                     
-                    // Skip if we already sent this torrent to UI
-                    if (pendingTorrents.has(torrentId)) {
-                        console.log('Torrent already pending:', torrentId)
-                        return
-                    }
-                    
-                    pendingTorrents.add(torrentId)
-                    
                     // Function to send torrent to UI
                     const sendToUI = () => {
                         if (mainWindow && mainWindow.webContents) {
-                            let displayName = torrent.name
-                            if (!displayName || displayName.trim() === '') {
-                                // Try to extract filename from the torrent source
-                                if (torrentThing && !torrentThing.startsWith('magnet:')) {
-                                    displayName = getNameFromPath(torrentThing)
-                                }
-                            }
-                            if (!displayName || displayName.trim() === '') {
-                                displayName = torrent.infoHash || 'Unknown Torrent'
-                            }
-                            
-                            console.log('Sending to UI:', displayName, 'Length:', torrent.length)
+                            console.log('Sending to UI:', torrent.name, 'Length:', torrent.length)
                             mainWindow.webContents.send('addTorrentToList', {
                                 torrentId: torrentId,
-                                torrentName: displayName,
-                                size: torrent.length ? formatBytes(torrent.length) : 'Calculating...',
+                                torrentName: torrent.name,
+                                size: torrent.length ? formatBytes(torrent.length) : 'Výpočet...',
                                 progress: Math.round(torrent.progress * 100),
                                 speed: '0 B/s',
                                 peers: '0 (0)',
-                                status: startTorrent ? 'Connecting' : 'Paused'
+                                status: startTorrent ? 'Připojování' : 'Pozastaveno'
                             })
+                            // Add to history
+                            const magnetLink = torrent.magnetURI || torrent.torrentFile
+                            addTorrentToHistory(torrent.name, magnetLink)
                         }
                     }
                     
@@ -346,16 +356,6 @@ ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList
                         if (!sent) {
                             sent = true
                             sendToUI()
-                        } else {
-                            // Metadata arrived after initial send - update the size and name if needed
-                            if (mainWindow && mainWindow.webContents) {
-                                console.log('Updating size and metadata for torrent:', torrent.name)
-                                mainWindow.webContents.send('updateTorrentSize', torrentId, torrent.length)
-                                // Also update the name in case it was undefined before
-                                if (torrent.name) {
-                                    mainWindow.webContents.send('updateTorrentName', torrentId, torrent.name)
-                                }
-                            }
                         }
                     })
                     
@@ -368,19 +368,20 @@ ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList
                         }
                     }, 1000)
                     
+                    pendingTorrents.add(torrentId)
                     startTorrentUpdates(torrent)
                     
                     torrent.on('done', () => {
                         console.log('Done:', torrent.name)
                         if (mainWindow && mainWindow.webContents) {
-                            mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Seeding')
+                            mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Sdílení')
                         }
                     })
 
                     torrent.on('error', (err) => {
                         console.error('Error:', err)
                         if (mainWindow && mainWindow.webContents) {
-                            mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Error')
+                            mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Chyba')
                         }
                     })
                 })
@@ -397,62 +398,56 @@ ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList
     }
 })
 
-// Helper function to process a seeded torrent and send it to UI
-const processSeededTorrent = (torrent, torrentId, torrentName, itemsToUpload, startSeeding) => {
-    if (pendingTorrents.has(torrentId)) {
-        console.log('Torrent already pending:', torrentId)
-        return
-    }
-    
-    pendingTorrents.add(torrentId)
-    
-    if (mainWindow && mainWindow.webContents) {
-        // Build display name with multiple fallbacks
-        let displayName = torrentName
-        if (!displayName || displayName.trim() === '') {
-            displayName = torrent.name
-        }
-        if (!displayName || displayName.trim() === '') {
-            // Try to extract filename from the upload path
-            if (itemsToUpload && itemsToUpload.length > 0) {
-                displayName = getNameFromPath(itemsToUpload[0])
+// Handle torrent removal
+ipcMain.handle("removeTorrent", async (event, torrentId) => {
+    try {
+        const torrent = client.torrents.find(t => t.infoHash === torrentId)
+        if (torrent) {
+            torrent.destroy()
+            stopTorrentUpdates(torrentId)
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('removeTorrentFromList', torrentId)
             }
+            console.log('Torrent removed:', torrentId)
         }
-        if (!displayName || displayName.trim() === '') {
-            displayName = torrentId || 'Unknown Torrent'
-        }
-        
-        console.log('Sending seeded torrent to UI:', displayName)
-        mainWindow.webContents.send('addTorrentToList', {
-            torrentId: torrentId,
-            torrentName: displayName,
-            size: torrent.length ? formatBytes(torrent.length) : 'Calculating...',
-            progress: Math.round(torrent.progress * 100),
-            speed: '0 B/s',
-            peers: '0 (0)',
-            status: startSeeding ? 'Seeding' : 'Paused'
-        })
-        console.log('✓ Sent to UI')
-    } else {
-        console.error('Cannot send to UI - mainWindow or webContents is not available')
+    } catch (err) {
+        console.error('Error removing torrent:', err)
     }
-    
-    startTorrentUpdates(torrent)
-    
-    torrent.on('done', () => {
-        console.log('Seeding done:', torrent.name)
-        if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Seeding')
-        }
-    })
+})
 
-    torrent.on('error', (err) => {
-        console.error('Seeding error:', err)
-        if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Error')
+// Handle torrent pause
+ipcMain.handle("pauseTorrent", async (event, torrentId) => {
+    try {
+        const torrent = client.torrents.find(t => t.infoHash === torrentId)
+        if (torrent) {
+            torrent.pause()
+            stopTorrentUpdates(torrentId)
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Pozastaveno')
+            }
+            console.log('Torrent paused:', torrentId)
         }
-    })
-}
+    } catch (err) {
+        console.error('Error pausing torrent:', err)
+    }
+})
+
+// Handle torrent resume
+ipcMain.handle("resumeTorrent", async (event, torrentId) => {
+    try {
+        const torrent = client.torrents.find(t => t.infoHash === torrentId)
+        if (torrent) {
+            torrent.resume()
+            startTorrentUpdates(torrent)
+            if (mainWindow && mainWindow.webContents) {
+                mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Stahování')
+            }
+            console.log('Torrent resumed:', torrentId)
+        }
+    } catch (err) {
+        console.error('Error resuming torrent:', err)
+    }
+})
 
 ipcMain.handle("createTorrent", async (event, itemsToUpload, torrentName, trackerURLs, torrentComment, pieceLength, privateTorrent, startSeeding) => {
     try {
@@ -462,9 +457,6 @@ ipcMain.handle("createTorrent", async (event, itemsToUpload, torrentName, tracke
         }
 
         console.log('Creating torrent:', torrentName)
-        console.log('Items to upload:', itemsToUpload)
-        
-        const torrentsBefore = client.torrents.length
         
         client.seed(itemsToUpload, {
             name: torrentName,
@@ -476,89 +468,15 @@ ipcMain.handle("createTorrent", async (event, itemsToUpload, torrentName, tracke
             createdBy: "Meowrent - PirateCZ"
         })
         
-        // Give the client a moment to add the torrent
-        setImmediate(() => {
-            const newTorrents = client.torrents.filter((t, idx) => idx >= torrentsBefore)
-            console.log('Found new seeded torrents:', newTorrents.length)
-            
-            newTorrents.forEach((torrent) => {
-                console.log('Setting up seeded torrent:', torrent.name)
-                
-                let torrentId = torrent.infoHash
-                console.log('Torrent infoHash:', torrentId)
-                
-                // If infoHash is not available yet, wait a bit and try again
-                if (!torrentId) {
-                    console.log('infoHash not available yet, waiting...')
-                    setTimeout(() => {
-                        torrentId = torrent.infoHash
-                        console.log('After wait, infoHash is:', torrentId)
-                        if (!torrentId) {
-                            console.error('SKIPPING: Still no infoHash for:', torrent.name)
-                            return
-                        }
-                        processSeededTorrent(torrent, torrentId, torrentName, itemsToUpload, startSeeding)
-                    }, 100)
-                    return
-                }
-                
-                processSeededTorrent(torrent, torrentId, torrentName, itemsToUpload, startSeeding)
-            })
-        })
+        console.log('✓ Seeding started for:', torrentName)
         
         if (formWindow) {
-            // Close the form after a brief delay to ensure messages are sent
-            setTimeout(() => {
-                if (formWindow) {
-                    formWindow.close()
-                    formWindow = null
-                }
-            }, 100)
+            formWindow.close()
         }
     } catch (err) {
         console.error('Error in createTorrent handler:', err)
         throw err
     }
-})
-
-ipcMain.handle("pauseTorrent", (event, torrentId) => {
-    console.log('Pause torrent handler called for:', torrentId)
-    pauseTorrent(torrentId)
-})
-
-ipcMain.handle("resumeTorrent", (event, torrentId) => {
-    console.log('Resume torrent handler called for:', torrentId)
-    resumeTorrent(torrentId)
-})
-
-ipcMain.handle("removeTorrent", (event, torrentId) => {
-    console.log('Remove torrent handler called for:', torrentId)
-    removeTorrent(torrentId)
-})
-
-ipcMain.on("showTorrentContextMenu", (event, torrentId, status) => {
-    const template = [
-        {
-            label: status === 'Paused' ? 'Resume' : 'Pause',
-            click: () => {
-                if (status === 'Paused') {
-                    resumeTorrent(torrentId)
-                } else {
-                    pauseTorrent(torrentId)
-                }
-            }
-        },
-        { type: 'separator' },
-        {
-            label: 'Delete',
-            click: () => {
-                removeTorrent(torrentId)
-            }
-        }
-    ]
-    
-    const menu = Menu.buildFromTemplate(template)
-    menu.popup({ window: mainWindow })
 })
 
 ipcMain.handle("toggleDarkMode", () => {
@@ -595,11 +513,75 @@ ipcMain.handle("changeMainWindowColor", (event, primaryColor, secondaryColor) =>
 
 ipcMain.handle("themeCircleContextMenu", (event, circleNumber) => {
     themeMenu = new Menu()
-    themeMenu.append(new MenuItem({ label: 'Delete Theme', click: () => {
+    themeMenu.append(new MenuItem({ label: 'Smazat motiv', click: () => {
 	settingsWindow.webContents.send("deleteTheme", circleNumber)
     }}))
 
     themeMenu.popup({
 	window: BrowserWindow.fromWebContents(event.sender)
     })
+})
+
+ipcMain.handle("showConfirmDialog", async (event, title, message) => {
+    const result = await dialog.showMessageBox(settingsWindow, {
+        type: 'question',
+        buttons: ['Cancel', 'OK'],
+        defaultId: 0,
+        title: title,
+        message: message
+    })
+    return result.response === 1
+})
+
+ipcMain.handle("exportSettings", async (event, settings) => {
+    const result = await dialog.showSaveDialog(settingsWindow, {
+        title: 'Export Settings',
+        defaultPath: 'meowrent-settings.json',
+        filters: [
+            { name: 'JSON Files', extensions: ['json'] },
+            { name: 'All Files', extensions: ['*'] }
+        ]
+    })
+
+    if (!result.canceled && result.filePath) {
+        try {
+            await fs.promises.writeFile(result.filePath, JSON.stringify(settings, null, 4))
+            await dialog.showMessageBox(settingsWindow, {
+                type: 'info',
+                title: 'Success',
+                message: 'Settings exported successfully!'
+            })
+        } catch (error) {
+            await dialog.showMessageBox(settingsWindow, {
+                type: 'error',
+                title: 'Error',
+                message: 'Failed to export settings: ' + error.message
+            })
+        }
+    }
+})
+
+ipcMain.handle("updateStartOnLaunch", (event, enabled) => {
+    try {
+        app.setLoginItemSettings({
+            openAtLogin: enabled,
+            path: process.execPath,
+            args: [app.getAppPath()]
+        })
+        return { success: true }
+    } catch (error) {
+        console.error('Error updating start on launch:', error)
+        return { success: false, error: error.message }
+    }
+})
+
+// Handle opening external URLs in default browser
+ipcMain.handle("openExternal", async (event, url) => {
+    try {
+        await shell.openExternal(url)
+        return { success: true }
+    } catch (error) {
+        console.error('Error opening external URL:', error)
+        return { success: false, error: error.message }
+    }
 })
