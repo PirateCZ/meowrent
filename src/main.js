@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, nativeTheme, Menu, MenuItem, shell } = require('electron')
 const path = require('node:path')
 const fs = require('node:fs')
-const { open } = require('node:fs/promises')
+const { open, writeFile } = require('node:fs/promises')
 let mainWindow = undefined
 let formWindow = undefined
 let settingsWindow = undefined
@@ -21,14 +21,10 @@ const torrentIntervals = new Map()
 // Track torrents that are being added
 const pendingTorrents = new Set()
 
-console.log('Setting up client listeners...')
-
 // Listen for any error on the client
 client.on('error', (err) => {
     console.error('Client error:', err)
 })
-
-console.log('✓ Client listeners initialized')
 
 // Utility function to format bytes
 const formatBytes = (bytes, decimals = 1) => {
@@ -99,7 +95,7 @@ const stopTorrentUpdates = (torrentId) => {
 // Function to load torrent history from history.json
 const loadTorrentHistory = async () => {
     try {
-        const historyFile = await open(path.join(app.getAppPath(), 'history.json'), 'r')
+        const historyFile = await open(path.join(process.cwd(), 'history.json'), 'r')
         const historyContent = await historyFile.readFile('utf-8')
         historyFile.close()
         const history = JSON.parse(historyContent)
@@ -114,7 +110,7 @@ const loadTorrentHistory = async () => {
 const addTorrentToHistory = async (torrentName, magnetLink) => {
     try {
         let history = { torrents: [], maxSize: 100, enabled: true }
-        const historyPath = path.join(app.getAppPath(), 'history.json')
+        const historyPath = path.join(process.cwd(), 'history.json')
         
         // Try to load existing history
         try {
@@ -132,6 +128,12 @@ const addTorrentToHistory = async (torrentName, magnetLink) => {
             return
         }
         
+        // Validate magnetLink
+        if (!magnetLink || magnetLink === 'undefined') {
+            console.warn('Warning: magnetLink is invalid, using torrent name as fallback')
+            magnetLink = torrentName
+        }
+        
         const maxSize = history.maxSize || 100
         const newEntry = {
             name: torrentName,
@@ -145,10 +147,9 @@ const addTorrentToHistory = async (torrentName, magnetLink) => {
         // Keep only the latest maxSize entries
         history.torrents = history.torrents.slice(0, maxSize)
         
-        // Save updated history
-        fs.writeFile(historyPath, JSON.stringify(history, null, 4), (err) => {
-            if (err) console.error('Error saving torrent history:', err)
-        })
+        // Save updated history using async/await
+        await writeFile(historyPath, JSON.stringify(history, null, 4))
+        console.log('Torrent added to history:', torrentName)
     } catch (error) {
         console.error('Error adding torrent to history:', error)
     }
@@ -300,6 +301,94 @@ ipcMain.handle("getDownloadsFolder", async () => {
     return downloadsFolder
 })
 
+ipcMain.handle("downloadFromHistory", async (event, folder, magnetLink) => {
+    console.log('downloadFromHistory handler called')
+    
+    try {
+        const torrentsBefore = client.torrents.length
+
+        client.add(magnetLink, {
+            path: folder,
+            skipVerify: false,
+            paused: false,
+        })
+        
+        // Give the client a moment to add it
+        setImmediate(() => {
+            const newTorrents = client.torrents.filter((t, idx) => idx >= torrentsBefore)
+            console.log('Found new torrents:', newTorrents.length)
+            
+            newTorrents.forEach((torrent) => {
+                console.log('Setting up torrent from history:', torrent.name)
+                
+                const torrentId = torrent.infoHash
+                
+                // Function to send torrent to UI
+                const sendToUI = async () => {
+                    if (mainWindow && mainWindow.webContents) {
+                        const magnetLink = torrent.magnetURI || torrent.torrentFile
+                        console.log('Sending to UI:', torrent.name, 'Length:', torrent.length)
+                        mainWindow.webContents.send('addTorrentToList', {
+                            torrentId: torrentId,
+                            torrentName: torrent.name,
+                            magnetLink: magnetLink,
+                            size: torrent.length ? formatBytes(torrent.length) : 'Výpočet...',
+                            progress: Math.round(torrent.progress * 100),
+                            speed: '0 B/s',
+                            peers: '0 (0)',
+                            status: 'Připojování'
+                        })
+                        // Add to history
+                        await addTorrentToHistory(torrent.name, magnetLink)
+                    }
+                }
+                
+                let sent = false
+                
+                // Wait for metadata event
+                torrent.once('metadata', () => {
+                    console.log('Metadata loaded:', torrent.name)
+                    if (!sent) {
+                        sent = true
+                        sendToUI()
+                    }
+                })
+                
+                // Fallback timeout if metadata doesn't fire
+                setTimeout(() => {
+                    if (!sent) {
+                        console.log('Metadata timeout, sending anyway')
+                        sent = true
+                        sendToUI()
+                    }
+                }, 1000)
+                
+                pendingTorrents.add(torrentId)
+                startTorrentUpdates(torrent)
+                
+                torrent.on('done', () => {
+                    console.log('Done:', torrent.name)
+                    if (mainWindow && mainWindow.webContents) {
+                        mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Sdílení')
+                    }
+                })
+
+                torrent.on('error', (err) => {
+                    console.error('Error:', err)
+                    if (mainWindow && mainWindow.webContents) {
+                        mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Chyba')
+                    }
+                })
+            })
+        })
+        
+        console.log('Download from history started')
+    } catch (err) {
+        console.error('Error:', err)
+        throw err
+    }
+})
+
 ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList, startTorrent, hashCheck) => {
     console.log('downloadTorrent handler called')
     
@@ -330,12 +419,14 @@ ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList
                     const torrentId = torrent.infoHash
                     
                     // Function to send torrent to UI
-                    const sendToUI = () => {
+                    const sendToUI = async () => {
                         if (mainWindow && mainWindow.webContents) {
+                            const magnetLink = torrent.magnetURI || torrent.torrentFile
                             console.log('Sending to UI:', torrent.name, 'Length:', torrent.length)
                             mainWindow.webContents.send('addTorrentToList', {
                                 torrentId: torrentId,
                                 torrentName: torrent.name,
+                                magnetLink: magnetLink,
                                 size: torrent.length ? formatBytes(torrent.length) : 'Výpočet...',
                                 progress: Math.round(torrent.progress * 100),
                                 speed: '0 B/s',
@@ -343,8 +434,7 @@ ipcMain.handle("downloadTorrent", async (event, saveLocation, fileList, linkList
                                 status: startTorrent ? 'Připojování' : 'Pozastaveno'
                             })
                             // Add to history
-                            const magnetLink = torrent.magnetURI || torrent.torrentFile
-                            addTorrentToHistory(torrent.name, magnetLink)
+                            await addTorrentToHistory(torrent.name, magnetLink)
                         }
                     }
                     
@@ -458,6 +548,8 @@ ipcMain.handle("createTorrent", async (event, itemsToUpload, torrentName, tracke
 
         console.log('Creating torrent:', torrentName)
         
+        const torrentsBefore = client.torrents.length
+        
         client.seed(itemsToUpload, {
             name: torrentName,
             announce: trackerURLs,
@@ -469,6 +561,75 @@ ipcMain.handle("createTorrent", async (event, itemsToUpload, torrentName, tracke
         })
         
         console.log('✓ Seeding started for:', torrentName)
+        
+        // Give the client a moment to add it
+        setImmediate(() => {
+            const newTorrents = client.torrents.filter((t, idx) => idx >= torrentsBefore)
+            console.log('Found new torrents:', newTorrents.length)
+            
+            newTorrents.forEach((torrent) => {
+                console.log('Setting up created torrent:', torrent.name)
+                
+                const torrentId = torrent.infoHash
+                
+                // Function to send torrent to UI
+                const sendToUI = async () => {
+                    if (mainWindow && mainWindow.webContents) {
+                        const magnetLink = torrent.magnetURI || torrent.torrentFile
+                        console.log('Sending created torrent to UI:', torrent.name, 'Length:', torrent.length)
+                        mainWindow.webContents.send('addTorrentToList', {
+                            torrentId: torrentId,
+                            torrentName: torrent.name,
+                            magnetLink: magnetLink,
+                            size: torrent.length ? formatBytes(torrent.length) : 'Výpočet...',
+                            progress: Math.round(torrent.progress * 100),
+                            speed: '0 B/s',
+                            peers: '0 (0)',
+                            status: startSeeding ? 'Sdílení' : 'Pozastaveno'
+                        })
+                        // Add to history
+                        await addTorrentToHistory(torrent.name, magnetLink)
+                    }
+                }
+                
+                let sent = false
+                
+                // Wait for metadata event
+                torrent.once('metadata', () => {
+                    console.log('Metadata loaded for created torrent:', torrent.name)
+                    if (!sent) {
+                        sent = true
+                        sendToUI()
+                    }
+                })
+                
+                // Fallback timeout if metadata doesn't fire
+                setTimeout(() => {
+                    if (!sent) {
+                        console.log('Metadata timeout for created torrent, sending anyway')
+                        sent = true
+                        sendToUI()
+                    }
+                }, 1000)
+                
+                pendingTorrents.add(torrentId)
+                startTorrentUpdates(torrent)
+                
+                torrent.on('done', () => {
+                    console.log('Done seeding:', torrent.name)
+                    if (mainWindow && mainWindow.webContents) {
+                        mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Sdílení')
+                    }
+                })
+
+                torrent.on('error', (err) => {
+                    console.error('Error in created torrent:', err)
+                    if (mainWindow && mainWindow.webContents) {
+                        mainWindow.webContents.send('updateTorrentStatus', torrentId, 'Chyba')
+                    }
+                })
+            })
+        })
         
         if (formWindow) {
             formWindow.close()
@@ -571,6 +732,35 @@ ipcMain.handle("updateStartOnLaunch", (event, enabled) => {
         return { success: true }
     } catch (error) {
         console.error('Error updating start on launch:', error)
+        return { success: false, error: error.message }
+    }
+})
+
+// IPC handler to load torrent history
+ipcMain.handle("loadTorrentHistory", async (event) => {
+    try {
+        const historyPath = path.join(process.cwd(), 'history.json')
+        const historyFile = await open(historyPath, 'r')
+        const historyContent = await historyFile.readFile('utf-8')
+        historyFile.close()
+        const history = JSON.parse(historyContent)
+        console.log('Loaded history from file:', history.torrents.length, 'torrents')
+        return history
+    } catch (error) {
+        console.error('Error loading torrent history:', error)
+        return { torrents: [], maxSize: 100, enabled: true }
+    }
+})
+
+// IPC handler to save torrent history
+ipcMain.handle("saveTorrentHistory", async (event, historyData) => {
+    try {
+        const historyPath = path.join(process.cwd(), 'history.json')
+        await writeFile(historyPath, JSON.stringify(historyData, null, 4))
+        console.log('Saved history to file:', historyData.torrents.length, 'torrents')
+        return { success: true }
+    } catch (error) {
+        console.error('Error saving torrent history:', error)
         return { success: false, error: error.message }
     }
 })

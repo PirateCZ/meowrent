@@ -108,6 +108,9 @@ let currentHistoryData = []
 document.addEventListener("DOMContentLoaded", async () => {
     let loadedSettings = await window.jsonApi.loadSettings()
     
+    // Load torrent history from history.json
+    let torrentHistory = await window.jsonApi.loadTorrentHistory()
+    
     // Initialize general settings
     startOnLaunchCheckbox.checked = loadedSettings.general?.startOnLaunch || false
     confirmBeforeExitCheckbox.checked = loadedSettings.general?.confirmBeforeExit ?? true
@@ -120,11 +123,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Initialize dark mode
     darkModeToggleButton.checked = loadedSettings.appearance.darkMode
     
-    // Initialize history settings
-    const historySettings = loadedSettings.advanced?.history || DEFAULT_SETTINGS.advanced.history
-    historyEnabledCheckbox.checked = historySettings.enabled ?? true
-    historyMaxSize.value = historySettings.maxSize || 100
-    displayTorrentHistory(historySettings.torrents || [])
+    // Initialize history settings from the loaded history file
+    historyEnabledCheckbox.checked = torrentHistory.enabled ?? true
+    historyMaxSize.value = torrentHistory.maxSize || 100
+    displayTorrentHistory(torrentHistory.torrents || [])
     
     // Ensure all default themes are in the loaded settings
     let themesMap = new Map()
@@ -381,13 +383,21 @@ window.addEventListener("beforeunload", async () => {
 	    },
 	    advanced: {
             history: {
-                torrents: getHistoryFromUI(),
-                maxSize: parseInt(historyMaxSize.value) || 100,
-                enabled: historyEnabledCheckbox.checked
+                torrents: [],
+                maxSize: 100,
+                enabled: true
             }
 	    },
 	}
 	await window.jsonApi.saveSettingsToJSON(settings)
+	
+	// Save the history data separately
+	const historyData = {
+	    torrents: getHistoryFromUI(),
+	    maxSize: parseInt(historyMaxSize.value) || 100,
+	    enabled: historyEnabledCheckbox.checked
+	}
+	await window.jsonApi.saveTorrentHistory(historyData)
 	
 	// Update start on launch setting in the system
 	if (window.startupApi) {
@@ -528,6 +538,20 @@ function displayTorrentHistory(torrents) {
         const itemButtons = document.createElement('div')
         itemButtons.className = 'history-item-buttons'
         
+        const downloadButton = document.createElement('button')
+        downloadButton.className = 'history-download-button'
+        downloadButton.textContent = 'Stáhnout'
+        downloadButton.addEventListener('click', async () => {
+            try {
+                const folder = await window.fileApi.selectFolder()
+                if (folder) {
+                    await window.fileApi.downloadFromHistory(folder, torrent.magnetLink)
+                }
+            } catch (error) {
+                console.error('Error downloading from history:', error)
+            }
+        })
+        
         const removeButton = document.createElement('button')
         removeButton.className = 'history-remove-button'
         removeButton.textContent = 'Odebrat'
@@ -547,6 +571,7 @@ function displayTorrentHistory(torrents) {
             }
         })
         
+        itemButtons.appendChild(downloadButton)
         itemButtons.appendChild(removeButton)
         
         historyItem.appendChild(itemName)

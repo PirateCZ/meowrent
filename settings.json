@@ -8,13 +8,13 @@
         "autoStart": false
     },
     "appearance": {
-        "darkMode": false,
+        "darkMode": true,
         "themes": [
             {
                 "id": 1,
                 "primaryColor": "#8549c3",
                 "secondaryColor": "#9c5edb",
-                "active": true,
+                "active": false,
                 "default": true,
                 "name": "Purple"
             },
@@ -22,7 +22,7 @@
                 "id": 2,
                 "primaryColor": "#60a53b",
                 "secondaryColor": "#8bc34a",
-                "active": false,
+                "active": true,
                 "default": true,
                 "name": "Green"
             },

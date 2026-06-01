@@ -7,12 +7,15 @@ contextBridge.exposeInMainWorld('darkModeApi', {
 contextBridge.exposeInMainWorld('jsonApi', {
     saveSettingsToJSON: (settings) => ipcRenderer.invoke("saveSettingsToJSON", settings),
     loadSettings: () => ipcRenderer.invoke("loadSettings"),
+    loadTorrentHistory: () => ipcRenderer.invoke("loadTorrentHistory"),
+    saveTorrentHistory: (historyData) => ipcRenderer.invoke("saveTorrentHistory", historyData),
 })
 
 contextBridge.exposeInMainWorld('fileApi', {
     selectFolder: () => ipcRenderer.invoke("openFolder"),
     getDefaultDownloadsFolder: () => ipcRenderer.invoke("getDownloadsFolder"),
     exportSettings: (settings) => ipcRenderer.invoke("exportSettings", settings),
+    downloadFromHistory: (folder, magnetLink) => ipcRenderer.invoke("downloadFromHistory", folder, magnetLink),
 })
 
 contextBridge.exposeInMainWorld('themeApi', {

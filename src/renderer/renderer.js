@@ -113,7 +113,7 @@ const formatBytes = (bytes, decimals = 1) => {
 // Context menu for torrents
 let currentContextMenu = null;
 
-const showContextMenu = (event, torrentId, torrentName) => {
+const showContextMenu = (event, torrentId, torrentName, magnetLink) => {
     // Remove old menu if exists
     if (currentContextMenu) {
         currentContextMenu.remove();
@@ -131,7 +131,7 @@ const showContextMenu = (event, torrentId, torrentName) => {
         isPaused 
             ? { label: 'Obnovit', action: () => resumeTorrentAction(torrentId) }
             : { label: 'Pozastavit', action: () => pauseTorrentAction(torrentId) },
-        { label: 'Kopírovat název', action: () => copyToClipboard(torrentName) },
+        { label: 'Kopírovat magnet', action: () => copyToClipboard(magnetLink) },
         { label: 'Odstranit', action: () => removeTorrent(torrentId), danger: true }
     ];
 
@@ -317,7 +317,7 @@ window.interfaceApi.addTorrentToList((event, data) => {
     // Add context menu listener for right-click
     torrentDiv.addEventListener('contextmenu', (e) => {
         e.preventDefault()
-        showContextMenu(e, torrentId, data.torrentName)
+        showContextMenu(e, torrentId, data.torrentName, data.magnetLink)
     })
 })
 
