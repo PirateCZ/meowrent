@@ -21,6 +21,8 @@
     flex-shrink: 0;
     color: var(--text);
     border-bottom: 2px solid var(--surface);
+    overflow: visible;
+    z-index: 100;
 }
 
 .topbar-left, .topbar-center, .topbar-right {
@@ -57,6 +59,25 @@
     border-radius: 6px;
     cursor: pointer;
     color: var(--text);
+    position: relative;
+}
+
+.icon-btn:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    border: 1px solid var(--muted);
+    margin-bottom: 8px;
+    pointer-events: none;
 }
 
 .icon-btn { 
@@ -147,8 +168,10 @@
     height: 10px;
     border-radius: 6px;
     background: rgba(0,0,0,0.06);
-    overflow: hidden;
+    overflow: visible;
     position: relative;
+    display: flex;
+    align-items: center;
 }
 
 .progress-fill {
@@ -157,6 +180,17 @@
     border-radius: 6px;
     background: var(--muted);
     transition: width 300ms linear;
+}
+
+.progress-text {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    pointer-events: none;
 }
 
 .statusbar {
@@ -168,6 +202,39 @@
     border-top: 2px solid var(--surface);
     flex-shrink: 0;
     color: var(--text);
+}
+
+/* Context Menu Styles */
+.context-menu {
+    position: fixed;
+    background: var(--surface);
+    border: 1px solid var(--muted);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    min-width: 180px;
+    overflow: hidden;
+}
+
+.context-menu-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    color: var(--text);
+    font-size: 14px;
+    transition: background-color 0.15s;
+    white-space: nowrap;
+}
+
+.context-menu-item:hover {
+    background-color: var(--muted);
+}
+
+.context-menu-item.danger {
+    color: #ef5350;
+}
+
+.context-menu-item.danger:hover {
+    background-color: rgba(239, 83, 80, 0.1);
 }
 
 @media (max-width: 720px) {

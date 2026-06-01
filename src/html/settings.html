@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="cs">
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<title>Settings</title>
+		<title>Nastavení</title>
 	</head>
 	<body>
 	    <div class="settings-container">
@@ -15,109 +15,218 @@
 		    <button class="settings-tab" id="downloadsPageButton">Stahování</button>
 		    <button class="settings-tab" id="appearancePageButton">Vzhled</button>
 		    <button class="settings-tab" id="advancedPageButton">Pokročilé</button>
+		    <button class="settings-tab" id="aboutPageButton">O aplikaci</button>
 		</aside>
 
 		<!-- RIGHT CONTENT -->
 		<section class="settings-content" id="generalPage"> 
-		    <h3>Obecné</h3>
+		    <h3>Obecné nastavení</h3>
 
-			<div class="setting-row">
-			    <div class="setting-text">
-				<span class="setting-name">Start on launch</span>
-				<span class="setting-desc">Automatically start the app with the system</span>
-			    </div>
-			    <label class="switch">
-				<input type="checkbox">
-				<span class="slider"></span>
-			    </label>
-			</div>
+			<div class="settings-block">
+				<h4>Aplikace</h4>
+				<div class="setting-row">
+				    <div class="setting-text">
+					<span class="setting-name">Spustit při zapnutí</span>
+					<span class="setting-desc">Automaticky spustit aplikaci se systémem</span>
+				    </div>
+				    <label class="switch">
+					<input type="checkbox" id="startOnLaunchCheckbox">
+					<span class="slider"></span>
+				    </label>
+				</div>
 
-			<div class="setting-row">
-			    <div class="setting-text">
-				<span class="setting-name">Confirm before exit</span>
-				<span class="setting-desc">Ask before closing active downloads</span>
-			    </div>
-			    <label class="switch">
-				<input type="checkbox" checked>
-				<span class="slider"></span>
-			    </label>
+				<div class="setting-row">
+				    <div class="setting-text">
+					<span class="setting-name">Potvrdit před uzavřením</span>
+					<span class="setting-desc">Zeptat se před zavřením aktivních stahování</span>
+				    </div>
+				    <label class="switch">
+					<input type="checkbox" id="confirmBeforeExitCheckbox" checked>
+					<span class="slider"></span>
+				    </label>
+				</div>
 			</div>
 
 		</section>
-		<section class="settings-content hidden" id="downloadsPage"> 
-			
-		    <h3>Stahování</h3>
 
-		    <div class="setting-row">
-			<div class="setting-text">
-			    <span class="setting-name">Auto start torrents</span>
-			    <span class="setting-desc">Start downloading immediately after adding</span>
+		<section class="settings-content hidden" id="downloadsPage"> 
+		    <h3>Nastavení stahování</h3>
+
+		    <div class="settings-block">
+				<h4>Umístění stahování</h4>
+				<div class="setting-row">
+					<div class="setting-text">
+						<span class="setting-name">Složka pro stahování</span>
+						<span class="setting-desc">Kde budou torrenty stahovány</span>
+					</div>
+					<button class="browse-button" id="browseDownloadFolder">Procházet</button>
+				</div>
+				<div class="folder-display" id="downloadFolderDisplay">
+					<span class="folder-path"></span>
+				</div>
 			</div>
-			<label class="switch">
-			    <input type="checkbox">
-			    <span class="slider"></span>
-			</label>
-		    </div>
+
+			<div class="settings-block">
+				<h4>Možnosti stahování</h4>
+				<div class="setting-row">
+				    <div class="setting-text">
+					<span class="setting-name">Automaticky spustit torrenty</span>
+					<span class="setting-desc">Zahájit stahování ihned po přidání</span>
+				    </div>
+				    <label class="switch">
+					<input type="checkbox" id="autoStartTorrentsCheckbox">
+					<span class="slider"></span>
+				    </label>
+				</div>
+			</div>
+
 		</section>
 
 		<section class="settings-content hidden" id="appearancePage"> 
-			
-		    <h3>Vzhled</h3>
+		    <h3>Nastavení vzhledu</h3>
 
-		    <div class="setting-row">
-			<div class="setting-text">
-			    <span class="setting-name">Tmavý režim</span>
-			    <span class="setting-desc">Změní barvy na tmavé</span>
-			</div>
-			<label class="switch">
-			    <input type="checkbox" id="darkModeCheckbox">
-			    <span class="slider"></span>
-			</label>
-		    </div>
-		    <h4>Barevné styly</h4>
-		    <div class="settings-row">
-			<button class="add-button" id="addButton">
-				Přidat barevný styl
-			</button>
-		    </div>
-		    <div class="setting-row">
-			<div class="theme-select" id="themeSelect">
-				
+		    <div class="settings-block">
+				<h4>Motiv</h4>
+				<div class="setting-row">
+					<div class="setting-text">
+						<span class="setting-name">Tmavý režim</span>
+						<span class="setting-desc">Použít tmavý motiv</span>
+					</div>
+					<label class="switch">
+						<input type="checkbox" id="darkModeCheckbox">
+						<span class="slider"></span>
+					</label>
+				</div>
 			</div>
 
-		    </div>
-		    <div class="setting-row">
-			<div class="setting-text">
-			    <span class="setting-name">Hlavní barva</span>
-			    <span class="setting-desc">První barva aplikace</span>
+		    <div class="settings-block">
+				<h4>Barevné motivy</h4>
+				<div class="setting-row">
+					<button class="add-button" id="addButton">
+						Přidat vlastní motiv
+					</button>
+				</div>
+				<div class="setting-row">
+					<div class="theme-select" id="themeSelect">
+						
+					</div>
+				</div>
 			</div>
-			<input type="color" class="color-input" id="primaryColor">
-		    </div>
 
-		    <div class="setting-row">
-			<div class="setting-text">
-			    <span class="setting-name">Sekundární barva</span>
-			    <span class="setting-desc">Druhá barva aplikace</span>
+		    <div class="settings-block">
+				<h4>Barvy aktivního motivu</h4>
+				<div class="setting-row">
+					<div class="setting-text">
+						<span class="setting-name">Primární barva</span>
+						<span class="setting-desc">Hlavní barva přízvuku</span>
+					</div>
+					<input type="color" class="color-input" id="primaryColor">
+				</div>
+
+				<div class="setting-row">
+					<div class="setting-text">
+						<span class="setting-name">Sekundární barva</span>
+						<span class="setting-desc">Vedlejší barva přízvuku</span>
+					</div>
+					<input type="color" class="color-input" id="secondaryColor">
+				</div>
 			</div>
-			<input type="color" class="color-input" id="secondaryColor">
-		    </div>
 		</section>
 
-		<section class="settings-content hidden"id="advancedPage"> 
-			
-		    <h3>Pokročilé</h3>
+		<section class="settings-content hidden" id="advancedPage"> 
+		    <h3>Pokročilé nastavení</h3>
 
-		    <div class="setting-row">
-			<div class="setting-text">
-			    <span class="setting-name">Auto start torrents</span>
-			    <span class="setting-desc">Start downloading immediately after adding</span>
+		    <div class="settings-block">
+				<h4>Správa dat</h4>
+				<div class="setting-row">
+					<div class="setting-text">
+						<span class="setting-name">Exportovat nastavení</span>
+						<span class="setting-desc">Stáhněte si svá nastavení jako soubor JSON</span>
+					</div>
+					<button class="action-button export-button" id="exportSettingsButton">Exportovat</button>
+				</div>
+
+				<div class="setting-row">
+					<div class="setting-text">
+						<span class="setting-name">Obnovit na výchozí</span>
+						<span class="setting-desc">Obnovit všechna nastavení na výchozí hodnoty</span>
+					</div>
+					<button class="action-button reset-button" id="resetDefaultsButton">Obnovit</button>
+				</div>
 			</div>
-			<label class="switch">
-			    <input type="checkbox">
-			    <span class="slider"></span>
-			</label>
-		    </div>
+
+			<div class="settings-block">
+				<h4>Historie torrentů</h4>
+				<div class="setting-row">
+					<div class="setting-text">
+						<span class="setting-name">Povolit historii</span>
+						<span class="setting-desc">Ukládat magnet linky použitých torrentů</span>
+					</div>
+					<label class="switch">
+						<input type="checkbox" id="historyEnabledCheckbox" checked>
+						<span class="slider"></span>
+					</label>
+				</div>
+
+				<div class="setting-row">
+					<div class="setting-text">
+						<span class="setting-name">Maximální počet položek</span>
+						<span class="setting-desc">Kolik torrentů si pamatovat v historii</span>
+					</div>
+					<input type="number" class="number-input" id="historyMaxSize" min="10" max="1000" value="100">
+				</div>
+
+				<div class="setting-row">
+					<button class="action-button clear-history-button" id="clearHistoryButton">Vymazat historii</button>
+				</div>
+			</div>
+
+			<div class="settings-block">
+				<h4>Seznam historie</h4>
+				<div id="historyList" class="history-list">
+					<!-- History items will be populated here -->
+				</div>
+			</div>
 		</section>
-	    </div>
-	</body>
-</html>
+
+		<section class="settings-content hidden" id="aboutPage">
+		    <h3>O aplikaci</h3>
+
+		    <div class="settings-block">
+				<h4>Meowrent</h4>
+				<div class="about-info">
+					<div class="about-item">
+						<span class="about-label">Verze:</span>
+						<span class="about-value">0.1.0</span>
+					</div>
+					<div class="about-item">
+						<span class="about-label">Popis:</span>
+						<span class="about-value">Jednoduchý a elegantní torrent klient pro Windows a Linux</span>
+					</div>
+					<div class="about-item">
+						<span class="about-label">Autor:</span>
+						<span class="about-value">PirateCZ</span>
+					</div>
+					<div class="about-item">
+						<span class="about-label">Technologie:</span>
+						<span class="about-value">Electron, WebTorrent, Node.js</span>
+					</div>
+				</div>
+			</div>
+
+		    <div class="settings-block">
+				<h4>Odkazy</h4>
+				<div class="about-buttons">
+					<a href="https://github.com/fscho/meowrent" class="about-link-button">GitHub</a>
+					<a href="https://piratecz.cz" class="about-link-button">Web stránka</a>
+					<a href="https://github.com/fscho/meowrent/issues" class="about-link-button">Nahlásit chybu</a>
+				</div>
+			</div>
+
+		    <div class="settings-block">
+				<h4>Licence</h4>
+				<p class="about-text">
+					Tato aplikace je distribuovaná pod licencí MIT. Pro více informací navštivte <a href="https://github.com/fscho/meowrent">GitHub repozitář</a>.
+				</p>
+			</div>
+		</section>
